@@ -119,7 +119,7 @@
   function pickerView() {
     const c = (k, sub) => `<button class="pcard ${k}" data-act="pick" data-k="${k}"><div class="av">${esc((S.profiles[k].name || '?')[0].toUpperCase())}</div><div><h3 class="disp">${esc(S.profiles[k].name)}</h3><p>${sub}</p></div></button>`;
     return `<div class="pick"><img class="big-logo" src="icons/icon.svg" alt=""><h1 class="disp grad-t">Tandem</h1>
-      <p class="t">Deux profils. Une salle. Zéro excuse.</p>
+      <p class="t"></p>
       ${c('him', 'Haut / Bas · force & sèche')}${c('her', 'Fessiers · tonus & ventre')}</div>`;
   }
 
@@ -149,7 +149,7 @@
         <button class="btn pri xl" data-act="start" data-id="${prog.id}">${doneToday ? 'Refaire la séance' : 'Lancer la séance'}</button></section>`;
     } else {
       hero = `<section class="hero rest"><div class="eyebrow">Aujourd'hui · ${DAYS[di]}</div>
-        <h1 class="disp">${esc(day.l || 'Repos')}<small class="grad-t">Récupère, c'est là que tu progresses</small></h1>
+        <h1 class="disp">${esc(day.l || 'Repos')}</h1>
         <div class="chips">${p.programs.map(q => `<button class="chip acc" data-act="openProg" data-id="${q.id}">${esc(q.name)}</button>`).join('')}</div>
         <p class="mut" style="font-size:13px">Envie de t'entraîner quand même ? Choisis une séance.</p></section>`;
     }
@@ -163,7 +163,7 @@
         <div class="stat"><b class="grad-t">${p.logs.length}</b><span>séances</span></div>
         <div class="stat"><b class="grad-t">${recs}</b><span>exos suivis</span></div>
       </div>
-      ${last ? `<div class="card row sp"><div><div class="eyebrow">Dernière séance</div><b>${esc(last.name)}</b> <span class="mut">· ${fdate(last.date)}</span></div><span class="chip">${last.dur} min</span></div>` : `<div class="card empty">Ta 1re séance t'attend. Lance-toi 💥</div>`}`;
+      ${last ? `<div class="card row sp"><div><div class="eyebrow">Dernière séance</div><b>${esc(last.name)}</b> <span class="mut">· ${fdate(last.date)}</span></div><span class="chip">${last.dur} min</span></div>` : `<div class="card empty">Aucune séance enregistrée pour le moment.</div>`}`;
   }
 
   /* ----- Séances ----- */
