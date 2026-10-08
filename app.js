@@ -553,7 +553,26 @@
   /* ---------- démarrage ---------- */
   render();
   try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { }
+  // animation d'ouverture
+  setTimeout(() => { const sp = $('#splash'); if (sp) { sp.classList.add('out'); setTimeout(() => sp.remove(), 700); } }, 2000);
+
+  // mises à jour : bandeau « Actualiser »
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    navigator.serviceWorker.register('sw.js').catch(() => { });
+    const showBanner = reg => {
+      $('#banner').hidden = false;
+      $('#reload').onclick = () => { if (reg.waiting) reg.waiting.postMessage('SKIP_WAITING'); else location.reload(); };
+    };
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      if (reg.waiting && navigator.serviceWorker.controller) showBanner(reg);
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        if (nw) nw.addEventListener('statechange', () => { if (nw.state === 'installed' && navigator.serviceWorker.controller) showBanner(reg); });
+      });
+      const check = () => reg.update().catch(() => { });
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) check(); });
+      setInterval(check, 30 * 60 * 1000);
+    }).catch(() => { });
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => { if (reloading) return; reloading = true; location.reload(); });
   }
 })();

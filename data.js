@@ -182,7 +182,7 @@
     };
 
     return {
-      name: 'Elle',
+      name: 'Pauline',
       programs: [hu, fa, ca, fb],
       week: [
         { p: null, l: 'Repos / marche' }, { p: 'hu' }, { p: 'fa' }, { p: 'ca' },

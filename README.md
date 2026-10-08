@@ -8,4 +8,4 @@ PWA (aucune dépendance, aucun serveur). Deux profils : **Ilann** (Haut/Bas cour
 3. Ouvrir `https://kakigatana.github.io/Muscu/` sur le téléphone → menu du navigateur → **Ajouter à l'écran d'accueil**.
 4. Après la 1re ouverture, l'app marche sans réseau. Les données restent sur le téléphone (Réglages → Exporter pour sauvegarder).
 
-Mise à jour : après un push, ouvrir l'app deux fois (la 2e ouverture charge la nouvelle version). Pour forcer, changer `V` dans `sw.js`.
+Mise à jour : changer `V` dans `sw.js` à chaque release. Les téléphones affichent alors un bandeau « Nouvelle version disponible · Actualiser ».
