@@ -1,6 +1,6 @@
-# TANDEM — muscu à deux, 100 % hors ligne
+# FONTE — carnet de muscu, 100 % hors ligne
 
-PWA (aucune dépendance, aucun serveur). Deux profils : **Ilann** (Haut/Bas court) et **Elle** (fessiers · tonus · ventre).
+PWA (aucune dépendance, aucun serveur). Programme Haut/Bas compact + nutrition (programme_complet v3.0).
 
 ## Mettre en ligne (GitHub Pages) puis installer
 1. Pousser ce dossier à la racine du repo `KakiGatana/Muscu` (branche `main`).
