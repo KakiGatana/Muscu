@@ -1,4 +1,4 @@
-# FONTE — carnet de muscu, 100 % hors ligne
+# Entraînement — carnet de muscu, 100 % hors ligne
 
 PWA (aucune dépendance, aucun serveur). Programme Haut/Bas compact + nutrition (programme_complet v3.0).
 

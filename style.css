@@ -1,4 +1,4 @@
-/* FONTE — fonte brute, cuivre, papier carnet */
+/* Entraînement — fonte brute, cuivre, papier carnet */
 :root{
   --bg:#131211;--card:#1c1b18;--card2:#252320;--line:#35322c;--line2:#4a453b;
   --tx:#ece6da;--mut:#9b9487;--a:#c8844a;--a2:#e1a96d;--ok:#7aa88e;--danger:#cc5a42;
@@ -28,7 +28,7 @@ b{font-weight:650}
 .hdr{display:flex;align-items:center;justify-content:space-between;padding:calc(16px + var(--sat)) 20px 6px}
 .logo{display:flex;align-items:center;gap:10px}
 .logo img{border-radius:8px}
-.logo b{font-family:var(--serif);font-size:24px;font-weight:600;letter-spacing:.01em}
+.logo b{font-family:var(--serif);font-size:21px;font-weight:600;letter-spacing:.01em}
 .date{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:600}
 main{padding:8px 16px calc(92px + var(--sab))}
 main.sub{padding-top:calc(12px + var(--sat))}
@@ -236,10 +236,10 @@ details.hist li{padding:6px 0;border-top:1px solid var(--line);margin:0}
 @keyframes spdraw{to{stroke-dashoffset:0}}
 @keyframes spfill{to{opacity:.16}}
 @keyframes sproll{from{transform:rotate(-110deg) scale(.7);opacity:0}30%{opacity:1}to{transform:rotate(0) scale(1)}}
-.sp-word{font-family:var(--serif);font-size:44px;font-weight:600;letter-spacing:.34em;padding-left:.34em;color:var(--tx);display:flex}
+.sp-word{font-family:var(--serif);font-size:27px;font-weight:600;letter-spacing:.22em;padding-left:.22em;color:var(--tx);display:flex}
 .sp-word span{opacity:0;animation:spw .5s both cubic-bezier(.2,.9,.3,1)}
-.sp-word span:nth-child(1){animation-delay:.9s}.sp-word span:nth-child(2){animation-delay:.96s}.sp-word span:nth-child(3){animation-delay:1.02s}
-.sp-word span:nth-child(4){animation-delay:1.08s}.sp-word span:nth-child(5){animation-delay:1.14s}
+
+
 @keyframes spw{from{opacity:0;transform:translateY(10px)}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){#splash *{animation-duration:.01s!important;animation-delay:0s!important}}
 

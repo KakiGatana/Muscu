@@ -1,4 +1,4 @@
-/* FONTE — carnet de muscu hors ligne (vanilla JS, aucune dépendance) */
+/* Entraînement — carnet de muscu hors ligne (vanilla JS, aucune dépendance) */
 (function () {
   'use strict';
   const KEY = 'fonte.v1', OLD_KEY = 'tandem.v1';
@@ -117,7 +117,7 @@
   }
   function header() {
     const d = new Date();
-    return `<header class="hdr"><div class="logo"><img src="icons/icon.svg" alt="" width="30" height="30"><b>Fonte</b></div>
+    return `<header class="hdr"><div class="logo"><img src="icons/icon.svg" alt="" width="30" height="30"><b>Entraînement</b></div>
       <span class="date">${DAYS[(d.getDay() + 6) % 7].slice(0, 3)}. ${d.getDate()} ${MONTHS[d.getMonth()]}</span></header>`;
   }
   function nav() {
@@ -346,7 +346,7 @@
       <div class="card"><div class="eyebrow" style="margin-bottom:10px">Programme</div>
         <p class="mut" style="font-size:13px;margin-bottom:12px">Programme d'origine : v${esc(S.progV || '')}. Remettre les séances d'origine efface tes modifications de séances, jamais ton historique.</p>
         <button class="btn dng" style="width:100%" data-act="resetProgs">Remettre les séances d'origine</button></div>
-      <p class="mut" style="text-align:center;font-size:12px;margin-top:18px">Fonte · fonctionne hors ligne</p>`;
+      <p class="mut" style="text-align:center;font-size:12px;margin-top:18px">Entraînement · fonctionne hors ligne</p>`;
   }
 
   /* ---------- feuilles / dialogues ---------- */
@@ -525,7 +525,7 @@
     export() {
       S.lastBackup = Date.now(); save();
       const blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `fonte-sauvegarde-${todayISO()}.json`;
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `entrainement-sauvegarde-${todayISO()}.json`;
       document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); toast('Sauvegarde exportée'); render();
     },
     importPick() { $('#imp').click(); },

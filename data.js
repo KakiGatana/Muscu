@@ -1,4 +1,4 @@
-/* FONTE — programme par défaut (généré depuis programme_complet.json v3.0). Modifiable dans l'app. */
+/* Entraînement — programme par défaut (généré depuis programme_complet.json v3.0). Modifiable dans l'app. */
 window.FONTE_DEFAULT = {
  "version": "3.0",
  "date": "2026-10-27",
