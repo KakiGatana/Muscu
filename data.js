@@ -556,15 +556,14 @@ window.FONTE_DEFAULT = {
     {
      "id": "athletique_3",
      "sec": "Puissance",
-     "n": "Med ball slams",
+     "n": "Skips (montées de genoux explosives)",
      "sets": 3,
-     "reps": "8",
+     "reps": "15 m",
      "rest": 60,
-     "start": "7",
-     "note": "",
-     "kind": "w",
-     "key": false,
-     "est": true
+     "start": "",
+     "note": "Appuis légers et rapides, à faire dehors. Pas de réception violente (genou).",
+     "kind": "b",
+     "key": false
     },
     {
      "id": "athletique_4",

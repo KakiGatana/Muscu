@@ -19,10 +19,21 @@
   const fdate = iso => { const d = new Date(iso); return `${DAYS[(d.getDay() + 6) % 7].slice(0, 3)}. ${d.getDate()} ${MONTHS[d.getMonth()]}`; };
   const norm = s => String(s || '').toLowerCase().replace(/^[a-z]\d\s*·\s*/, '').replace(/[^a-z0-9àâçéèêëîïôûùüÿ]+/g, ' ').trim();
 
+  /* ---------- correctifs de programme appliqués une seule fois aux données déjà enregistrées ---------- */
+  const PATCHES = [
+    // 1 : Med ball slams remplacé par des skips (séance Athlétique, à faire dehors)
+    s => {
+      const p = s.programs.find(x => x.id === 'athletique'); if (!p) return;
+      const i = p.ex.findIndex(e => norm(e.n) === 'med ball slams');
+      if (i >= 0) p.ex.splice(i, 1, { id: p.ex[i].id, sec: p.ex[i].sec, n: 'Skips (montées de genoux explosives)', sets: 3, reps: '15 m', rest: 60, start: '', note: 'Appuis légers et rapides, à faire dehors. Pas de réception violente (genou).', kind: 'b', key: false });
+    }
+  ];
+  function migrate(s) { for (let i = s.patchV || 0; i < PATCHES.length; i++) { try { PATCHES[i](s); } catch (e) { } } s.patchV = PATCHES.length; return s; }
+
   /* ---------- état (tout est sauvegardé sur l'appareil, rien ne repart à zéro) ---------- */
   function fresh() {
     const d = FONTE_DEFAULT;
-    return { v: 1, name: 'Ilann', opts: { sound: true, vib: true }, cur: null, progV: d.version,
+    return { v: 1, name: 'Ilann', opts: { sound: true, vib: true }, cur: null, progV: d.version, patchV: PATCHES.length,
       programs: clone(d.programs), week: clone(d.week), guide: clone(d.guide), logs: [], body: [], lastBackup: 0 };
   }
   // reprend l'historique d'une ancienne sauvegarde (version « Tandem ») sans toucher au nouveau programme
@@ -35,7 +46,7 @@
   function load() {
     try {
       const r = localStorage.getItem(KEY);
-      if (r) { const s = JSON.parse(r); if (s && Array.isArray(s.programs) && Array.isArray(s.week)) { s.opts = s.opts || { sound: true, vib: true }; s.logs = s.logs || []; s.body = s.body || []; s.guide = s.guide || clone(FONTE_DEFAULT.guide); return s; } }
+      if (r) { const s = JSON.parse(r); if (s && Array.isArray(s.programs) && Array.isArray(s.week)) { s.opts = s.opts || { sound: true, vib: true }; s.logs = s.logs || []; s.body = s.body || []; s.guide = s.guide || clone(FONTE_DEFAULT.guide); return migrate(s); } }
       const old = localStorage.getItem(OLD_KEY);
       if (old) { const o = JSON.parse(old); if (o && o.profiles) return fromOld(o); }
     } catch (e) { }
@@ -445,7 +456,7 @@
 
   /* ---------- sauvegarde / import ---------- */
   function importData(o) {
-    if (o && Array.isArray(o.programs) && Array.isArray(o.week)) { S = o; S.opts = S.opts || { sound: true, vib: true }; S.logs = S.logs || []; S.body = S.body || []; S.guide = S.guide || clone(FONTE_DEFAULT.guide); return true; }
+    if (o && Array.isArray(o.programs) && Array.isArray(o.week)) { S = o; S.opts = S.opts || { sound: true, vib: true }; S.logs = S.logs || []; S.body = S.body || []; S.guide = S.guide || clone(FONTE_DEFAULT.guide); migrate(S); return true; }
     if (o && o.profiles && o.profiles.him) { S = fromOld(o); return true; }
     return false;
   }
