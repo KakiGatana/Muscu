@@ -177,9 +177,9 @@
       ? `<div class="card nudge"><div><b>Sauvegarde conseillée</b><p class="mut">${S.lastBackup ? 'Dernière il y a ' + Math.round((Date.now() - S.lastBackup) / 864e5) + ' jours.' : 'Aucune sauvegarde pour l\'instant.'}</p></div><button class="btn sm" data-act="export">Exporter</button></div>` : '';
     const xp = totalXp(), L = RPG.levelOf(xp), xa = RPG.need(L), xb = RPG.need(L + 1), stk = streakNow();
     const spamBtn = hasCur ? '' : `<button class="btn xl ghost spam" data-act="spam">Salle bondée ? Séance spam</button>`;
-    const adv = `<button class="card advstrip" data-act="tab" data-t="adv"><canvas data-me class="px" width="30" height="36"></canvas>
-      <div class="grow"><div class="eyebrow">Niveau ${L} · ${RPG.TIERS[RPG.tierIdx(L)].t}</div><div class="xp"><i style="width:${Math.round((xp - xa) / (xb - xa) * 100)}%"></i></div>
-      <p class="mut">${xp - xa} / ${xb - xa} XP${stk > 1 ? ' · série de ' + stk : ''}</p></div>${svg('go', 'go')}</button>`;
+    const adv = `<button class="card advstrip" data-act="tab" data-t="adv"><canvas data-me class="px" width="40" height="48"></canvas>
+      <div class="grow"><div class="eyebrow">Niveau ${L} · ${RPG.TIERS[RPG.tierIdx(L)].t}</div><div class="xp"><i style="width:${(L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div>
+      <p class="mut">${L >= RPG.MAX ? 'Niveau maximum' : (xp - xa) + ' / ' + (xb - xa) + ' XP'}${stk > 1 ? ' · série de ' + stk : ''}</p></div>${svg('go', 'go')}</button>`;
     return `${hero}${spamBtn}${adv}${nudge}
       <div class="sect-h"><h2>La semaine</h2><button class="btn sm ghost" data-act="weekEdit">${svg('edit')}Modifier</button></div>
       <div class="week">${wk}</div>
@@ -371,14 +371,14 @@
     const zones = RPG.ZONES.map((z, i) => {
       const open = L >= z.l, done = z.m.every(m => m.l <= L);
       return `<div class="zone ${open ? '' : 'lock'} ${i === zi ? 'cur' : ''}"><div class="row sp"><b>${open ? esc(z.n) : 'Zone inconnue'}</b><span class="chip ${done ? 'ok' : ''}">${done ? 'Terminée' : open ? 'En cours' : 'Niveau ' + z.l}</span></div>
-        ${open ? `<ul>${z.m.map(m => `<li class="${m.l <= L ? 'won' : ''}"><span>${esc(m.n)}</span><small>${m.l <= L ? 'vaincu' : 'niveau ' + m.l}</small></li>`).join('')}</ul>` : ''}</div>`;
+        ${open ? `<ul>${z.m.map(m => `<li class="${m.l <= L ? 'won' : ''}"><span>${m.boss ? '<b class="boss">Boss</b>' : ''}${esc(m.n)}</span><small>${m.l <= L ? (m.boss ? 'terrassé' : 'vaincu') : 'niveau ' + m.l}</small></li>`).join('')}</ul>` : ''}</div>`;
     }).join('');
     const tiers = RPG.TIERS.map((t, i) => `<div class="rk"><div class="grow"><b>${L >= t.l ? esc(t.t) : '???'}</b><div class="mut" style="font-size:12.5px">${L >= t.l ? esc(t.g) : 'Se débloque au niveau ' + t.l}</div></div>${i === ti ? '<span class="tagc">Actuel</span>' : ''}</div>`).join('');
     const bd = badges().map(b => `<div class="rk"><div class="grow"><b class="${b[2] ? '' : 'mut'}">${b[0]}</b><div class="mut" style="font-size:12.5px">${b[1]}</div></div>${b[2] ? '<span class="chip ok">Obtenu</span>' : ''}</div>`).join('');
     return `<div class="sect-h first"><h2>Aventure</h2><span class="chip">${esc(RPG.ZONES[zi].n)}</span></div>
-      <div class="scene"><div class="hud"><b>NIV. ${L}</b><span>${esc(RPG.TIERS[ti].t)}</span><div class="xp"><i style="width:${Math.round((xp - xa) / (xb - xa) * 100)}%"></i></div></div><canvas id="adv" width="144" height="128"></canvas><div id="advcap" class="cap">${esc(S.name)} avance dans ${esc(RPG.ZONES[zi].n.toLowerCase())}.</div></div>
-      <div class="card me"><canvas data-me class="px" width="30" height="36"></canvas><div class="grow"><div class="eyebrow">Niveau ${L}</div><h3>${esc(S.name)}, ${esc(RPG.TIERS[ti].t)}</h3>
-        <div class="xp"><i style="width:${Math.round((xp - xa) / (xb - xa) * 100)}%"></i></div><p class="mut" style="font-size:12.5px">${xp - xa} / ${xb - xa} XP · niveau ${L + 1} dans ${xb - xp} XP</p></div></div>
+      <div class="scene"><div class="hud"><b>NIV. ${L}</b><span>${esc(RPG.TIERS[ti].t)}</span><div class="xp"><i style="width:${(L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div></div><canvas id="adv" width="144" height="128"></canvas><div id="advcap" class="cap">${esc(S.name)} avance dans ${esc(RPG.ZONES[zi].n.toLowerCase())}.</div></div>
+      <div class="card me"><canvas data-me class="px" width="40" height="48"></canvas><div class="grow"><div class="eyebrow">Niveau ${L}</div><h3>${esc(S.name)}, ${esc(RPG.TIERS[ti].t)}</h3>
+        <div class="xp"><i style="width:${(L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div><p class="mut" style="font-size:12.5px">${L >= RPG.MAX ? xp + ' XP · niveau maximum atteint' : (xp - xa) + ' / ' + (xb - xa) + ' XP · niveau ' + (L + 1) + ' dans ' + (xb - xp) + ' XP'}</p></div></div>
       <div class="stats">
         <div class="stat"><b>${stk}</b><span>série en cours</span></div>
         <div class="stat"><b>×${fw(nextMult)}</b><span>prochaine séance</span></div>
@@ -388,7 +388,8 @@
         <li><b>3 XP</b> par série validée, <b>2 XP</b> par échauffement, <b>+15</b> si la séance est faite en entier, <b>+5</b> par record.</li>
         <li>Le total est multiplié par ta série : ×1 le premier jour, puis +0,25 par jour d'entraînement d'affilée, jusqu'à ×2,5.</li>
         <li>Un jour de repos prévu au planning ne casse pas la série. Un jour de séance prévu et sauté la remet à zéro.</li>
-        <li>Une séance spam compte comme les autres : ce sont les séries validées qui paient.</li></ul></details>
+        <li>Une séance spam compte comme les autres : ce sont les séries validées qui paient.</li>
+        <li>Niveau maximum : <b>100</b>. À rythme régulier (environ 4 séances par semaine), compte à peu près un an pour le niveau 50 et quatre ans pour le niveau 100.</li></ul></details>
       <div class="sect-h"><h2>Le voyage</h2></div>${zones}
       <div class="sect-h"><h2>Équipement</h2></div>${tiers}
       <div class="sect-h"><h2>Titres</h2></div>${bd}`;

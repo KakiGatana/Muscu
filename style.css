@@ -300,3 +300,7 @@ details.hist li{padding:6px 0;border-top:1px solid var(--line);margin:0}
 #banner[hidden]{display:none}
 #banner button{padding:8px 14px;border-radius:4px;background:linear-gradient(180deg,#2f84ea,#1a4fa6);border:1px solid #8ccaff;color:#fff;font-weight:700}
 @keyframes bn{from{transform:translateX(-50%) translateY(-150%)}}
+
+.boss{display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#ffb07a;border:1px solid rgba(255,140,90,.6);border-radius:3px;padding:1px 6px;margin-right:8px;vertical-align:1px}
+.zone li.won .boss{color:var(--ok);border-color:rgba(73,224,179,.5)}
+.cap.boss{color:#ffb07a;border-color:rgba(255,140,90,.7);box-shadow:0 0 14px rgba(255,93,115,.45)}
