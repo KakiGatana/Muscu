@@ -304,3 +304,20 @@ details.hist li{padding:6px 0;border-top:1px solid var(--line);margin:0}
 .boss{display:inline-block;font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#ffb07a;border:1px solid rgba(255,140,90,.6);border-radius:3px;padding:1px 6px;margin-right:8px;vertical-align:1px}
 .zone li.won .boss{color:var(--ok);border-color:rgba(73,224,179,.5)}
 .cap.boss{color:#ffb07a;border-color:rgba(255,140,90,.7);box-shadow:0 0 14px rgba(255,93,115,.45)}
+
+/* moments importants de l'aventure */
+.scene .fxb{position:absolute;left:0;right:0;top:33%;z-index:3;text-align:center;pointer-events:none;padding:10px 0 11px;
+  background:linear-gradient(90deg,transparent,rgba(6,10,20,.88) 18%,rgba(6,10,20,.88) 82%,transparent);border-top:1px solid var(--a);border-bottom:1px solid var(--a);
+  box-shadow:0 0 26px rgba(77,163,255,.6);animation:fxb 2.4s both}
+.fxb small{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--a2)}
+.fxb b{display:block;font-size:23px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:#fff;text-shadow:0 0 16px var(--a);padding:0 12px}
+.fxb.boss{border-color:#ff5d73;box-shadow:0 0 30px rgba(255,93,115,.7)}.fxb.boss small{color:#ff9aa8}.fxb.boss b{text-shadow:0 0 16px #ff5d73}
+.fxb.tier{border-color:var(--v);box-shadow:0 0 30px rgba(139,108,255,.7)}.fxb.tier small{color:#c4b5ff}.fxb.tier b{text-shadow:0 0 16px var(--v)}
+.fxb.win{border-color:#ffd76a;box-shadow:0 0 30px rgba(255,215,106,.6)}.fxb.win small{color:#ffe9a0}.fxb.win b{text-shadow:0 0 16px #ffd76a}
+@keyframes fxb{0%{opacity:0;transform:scaleY(.2)}12%{opacity:1;transform:none}80%{opacity:1}100%{opacity:0}}
+.scene .bossbar{position:absolute;right:10px;top:10px;z-index:2;width:44%;padding:6px 9px 8px;border-radius:4px;background:rgba(20,6,10,.82);border:1px solid #ff5d73;box-shadow:0 0 14px rgba(255,93,115,.5);font-family:var(--mono)}
+.bossbar span{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:#ffc2ca;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bossbar div{height:6px;margin-top:5px;background:#1a070b;border:1px solid rgba(255,93,115,.6);border-radius:2px;overflow:hidden}
+.bossbar i{display:block;height:100%;background:linear-gradient(90deg,#ff5d73,#ffb07a);transition:width .25s}
+.scene .skip{position:absolute;right:10px;bottom:54px;z-index:4;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);padding:5px 10px;border:1px solid var(--line2);border-radius:4px;background:rgba(6,10,20,.75)}
+.pend{color:#c4b5ff;font-weight:700;text-shadow:0 0 10px rgba(139,108,255,.8)}

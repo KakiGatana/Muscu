@@ -175,11 +175,11 @@
     const bw = S.body.slice().sort((a, b) => a.d.localeCompare(b.d)).pop();
     const nudge = (S.logs.length >= 3 && Date.now() - (S.lastBackup || 0) > 14 * 864e5)
       ? `<div class="card nudge"><div><b>Sauvegarde conseillée</b><p class="mut">${S.lastBackup ? 'Dernière il y a ' + Math.round((Date.now() - S.lastBackup) / 864e5) + ' jours.' : 'Aucune sauvegarde pour l\'instant.'}</p></div><button class="btn sm" data-act="export">Exporter</button></div>` : '';
-    const xp = totalXp(), L = RPG.levelOf(xp), xa = RPG.need(L), xb = RPG.need(L + 1), stk = streakNow();
+    const xp = totalXp(), Lr = RPG.levelOf(xp), L = seenLvl(Lr), pending = Lr > L, xa = RPG.need(L), xb = RPG.need(L + 1), stk = streakNow();
     const spamBtn = hasCur ? '' : `<button class="btn xl ghost spam" data-act="spam">Salle bondée ? Séance spam</button>`;
     const adv = `<button class="card advstrip" data-act="tab" data-t="adv"><canvas data-me class="px" width="40" height="48"></canvas>
-      <div class="grow"><div class="eyebrow">Niveau ${L} · ${RPG.TIERS[RPG.tierIdx(L)].t}</div><div class="xp"><i style="width:${(L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div>
-      <p class="mut">${L >= RPG.MAX ? 'Niveau maximum' : (xp - xa) + ' / ' + (xb - xa) + ' XP'}${stk > 1 ? ' · série de ' + stk : ''}</p></div>${svg('go', 'go')}</button>`;
+      <div class="grow"><div class="eyebrow">Niveau ${L} · ${RPG.TIERS[RPG.tierIdx(L)].t}</div><div class="xp"><i style="width:${Math.min(100, L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div>
+      <p class="mut">${pending ? '<b class="pend">Niveau supérieur ! Ouvre l\'aventure</b>' : L >= RPG.MAX ? 'Niveau maximum' : (xp - xa) + ' / ' + (xb - xa) + ' XP'}${stk > 1 ? ' · série de ' + stk : ''}</p></div>${svg('go', 'go')}</button>`;
     return `${hero}${spamBtn}${adv}${nudge}
       <div class="sect-h"><h2>La semaine</h2><button class="btn sm ghost" data-act="weekEdit">${svg('edit')}Modifier</button></div>
       <div class="week">${wk}</div>
@@ -359,13 +359,18 @@
     return [['Régulier', 'Série de 5 séances', maxSt >= 5], ['Inarrêtable', 'Série de 10 séances', maxSt >= 10], ['Sans faute', '10 séances complètes', full >= 10],
       ['Briseur de records', '10 records battus', rec >= 10], ['Roi du spam', '5 séances spam', spam >= 5], ['Centurion', '100 séances', S.logs.length >= 100]];
   }
+  // niveau déjà montré à l'écran : montées de niveau, tenues, zones et boss attendent que l'Aventure soit ouverte
+  function seenLvl(L) { return Math.max(1, Math.min(L, (S.adv && S.adv.seen) || 1)); }
   function mountGame() {
-    const L = RPG.levelOf(totalXp());
+    const Lr = RPG.levelOf(totalXp()), L = seenLvl(Lr);
     document.querySelectorAll('canvas[data-me]').forEach(c => RPG.portrait(c, L));
-    const c = $('#adv'); if (c) RPG.start(c, L, $('#advcap')); else RPG.stop();
+    const c = $('#adv'); if (!c) { RPG.stop(); return; }
+    RPG.start(c, { level: L, target: Lr, cap: $('#advcap'), name: S.name,
+      onSeen: l => { S.adv = { seen: l }; save(); },
+      onDone: () => { if (V.tab === 'adv' && !top()) render(); } });
   }
   function advView() {
-    const xp = totalXp(), L = RPG.levelOf(xp), xa = RPG.need(L), xb = RPG.need(L + 1), ti = RPG.tierIdx(L), zi = RPG.zoneIdx(L);
+    const xp = totalXp(), Lr = RPG.levelOf(xp), L = seenLvl(Lr), pending = Lr > L, xa = RPG.need(L), xb = RPG.need(L + 1), ti = RPG.tierIdx(L), zi = RPG.zoneIdx(L);
     const stk = streakNow(), today = S.logs.some(l => logDay(l) === todayISO()), nextMult = RPG.streakMult(Math.max(1, today ? stk : stk + 1));
     const beaten = RPG.ZONES.reduce((n, z) => n + z.m.filter(m => m.l <= L).length, 0), total = RPG.ZONES.reduce((n, z) => n + z.m.length, 0);
     const zones = RPG.ZONES.map((z, i) => {
@@ -376,9 +381,9 @@
     const tiers = RPG.TIERS.map((t, i) => `<div class="rk"><div class="grow"><b>${L >= t.l ? esc(t.t) : '???'}</b><div class="mut" style="font-size:12.5px">${L >= t.l ? esc(t.g) : 'Se débloque au niveau ' + t.l}</div></div>${i === ti ? '<span class="tagc">Actuel</span>' : ''}</div>`).join('');
     const bd = badges().map(b => `<div class="rk"><div class="grow"><b class="${b[2] ? '' : 'mut'}">${b[0]}</b><div class="mut" style="font-size:12.5px">${b[1]}</div></div>${b[2] ? '<span class="chip ok">Obtenu</span>' : ''}</div>`).join('');
     return `<div class="sect-h first"><h2>Aventure</h2><span class="chip">${esc(RPG.ZONES[zi].n)}</span></div>
-      <div class="scene"><div class="hud"><b>NIV. ${L}</b><span>${esc(RPG.TIERS[ti].t)}</span><div class="xp"><i style="width:${(L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div></div><canvas id="adv" width="144" height="128"></canvas><div id="advcap" class="cap">${esc(S.name)} avance dans ${esc(RPG.ZONES[zi].n.toLowerCase())}.</div></div>
+      <div class="scene"><div class="hud"><b>NIV. ${L}</b><span>${esc(RPG.TIERS[ti].t)}</span><div class="xp"><i style="width:${Math.min(100, L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div></div>${pending ? '<button class="skip" data-act="advSkip">Passer</button>' : ''}<canvas id="adv" width="144" height="128"></canvas><div id="advcap" class="cap">${esc(S.name)} avance dans ${esc(RPG.ZONES[zi].n.toLowerCase())}.</div></div>
       <div class="card me"><canvas data-me class="px" width="40" height="48"></canvas><div class="grow"><div class="eyebrow">Niveau ${L}</div><h3>${esc(S.name)}, ${esc(RPG.TIERS[ti].t)}</h3>
-        <div class="xp"><i style="width:${(L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div><p class="mut" style="font-size:12.5px">${L >= RPG.MAX ? xp + ' XP · niveau maximum atteint' : (xp - xa) + ' / ' + (xb - xa) + ' XP · niveau ' + (L + 1) + ' dans ' + (xb - xp) + ' XP'}</p></div></div>
+        <div class="xp"><i style="width:${Math.min(100, L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div><p class="mut" style="font-size:12.5px">${pending ? 'Montée de niveau en cours…' : L >= RPG.MAX ? xp + ' XP · niveau maximum atteint' : (xp - xa) + ' / ' + (xb - xa) + ' XP · niveau ' + (L + 1) + ' dans ' + (xb - xp) + ' XP'}</p></div></div>
       <div class="stats">
         <div class="stat"><b>${stk}</b><span>série en cours</span></div>
         <div class="stat"><b>×${fw(nextMult)}</b><span>prochaine séance</span></div>
@@ -545,7 +550,7 @@
       <div class="g"><div class="stat"><b>${dur}</b><span>minutes</span></div><div class="stat"><b>${allSets + warm}</b><span>séries</span></div><div class="stat"><b>${(vol / 1000).toFixed(1).replace('.', ',')}</b><span>tonnes</span></div></div>
       <div class="coach"><div class="eyebrow">Le coach</div><p>${esc(log.coach)}</p></div>
       <div class="xpgain"><b>+${gain.xp} XP</b><span>${gain.base} × ${fw(gain.mult)} · série de ${streak}</span></div>
-      ${lvl1 > lvl0 ? `<div class="lvlup">Niveau supérieur · niveau ${lvl1}${newTier ? ' · nouveau titre : ' + esc(RPG.TIERS[RPG.tierIdx(lvl1)].t) : ''}${newZone ? ' · nouvelle zone : ' + esc(RPG.ZONES[RPG.zoneIdx(lvl1)].n) : ''}</div>` : ''}
+      ${lvl1 > lvl0 ? `<div class="lvlup">Niveau supérieur !${RPG.ZONES.some(z => z.m.some(x => x.boss && x.l > lvl0 && x.l <= lvl1)) ? ' Un boss t\'attend.' : ''}${newTier ? ' Une nouvelle tenue aussi.' : ''}${newZone ? ' Une nouvelle zone s\'ouvre.' : ''} Ouvre l'aventure pour y assister.</div>` : ''}
       ${doRecords.map(r => `<div class="rec"><span>${esc(r.n)}</span><span>${fw(r.was)} → <b>${fw(r.w)} kg</b></span></div>`).join('')}
       <div class="g2" style="margin-top:12px"><button class="btn" data-act="toAdv">Voir l'aventure</button><button class="btn pri" data-act="sheetX">Fermer</button></div></div>`);
   }
@@ -560,6 +565,7 @@
   /* ---------- actions ---------- */
   const A = {
     toAdv() { closeSheet(); setTab('adv'); },
+    advSkip() { S.adv = { seen: RPG.levelOf(totalXp()) }; save(); render(); },
     spam() {
       const seen = {}, list = [];
       S.programs.forEach(p => p.ex.forEach(e => { const k = norm(e.n); if (e.kind !== 'c' && !seen[k]) { seen[k] = 1; list.push(e); } }));

@@ -317,65 +317,232 @@
 
   /* ---------- la scène ---------- */
   let raf = 0, st = null;
+  const BEAT = .5;
   function say(s, txt, cls) { if (s.cap && s.cap.isConnected) { s.cap.textContent = txt; s.cap.className = 'cap ' + (cls || ''); } }
+  function banner(s, small, big, cls) {
+    if (!s.box || !s.box.isConnected) return;
+    const old = s.box.querySelector('.fxb'); if (old) old.remove();
+    const b = document.createElement('div'), a = document.createElement('small'), c = document.createElement('b');
+    b.className = 'fxb ' + (cls || ''); a.textContent = small; c.textContent = big; b.appendChild(a); b.appendChild(c); s.box.appendChild(b);
+  }
+  function bossbar(s, m, ratio) {
+    if (!s.box || !s.box.isConnected) return;
+    let b = s.box.querySelector('.bossbar');
+    if (!m) { if (b) b.remove(); return; }
+    if (!b) { b = document.createElement('div'); b.className = 'bossbar'; b.innerHTML = '<span></span><div><i></i></div>'; b.firstChild.textContent = m.n; s.box.appendChild(b); }
+    b.querySelector('i').style.width = Math.max(0, Math.round(ratio * 100)) + '%';
+  }
+  // moments importants à montrer : montée de niveau, nouvelle tenue, nouvelle zone, premier combat contre un boss.
+  // Ils sont joués quand la scène est à l'écran, jamais en arrière-plan ; « seen » = niveau acquis une fois le groupe vu.
+  function buildQueue(from, to) {
+    const qu = [];
+    for (let l = from + 1; l <= to; l++) {
+      const last = qu[qu.length - 1];
+      if (last && last.t === 'lvl' && last.solo) last.to = l; else qu.push({ t: 'lvl', to: l, solo: true });
+      const cur = qu[qu.length - 1], extra = [];
+      if (tierIdx(l) > tierIdx(l - 1)) extra.push({ t: 'tier', i: tierIdx(l) });
+      ZONES.forEach(z => z.m.forEach(m => { if (m.boss && m.l === l) extra.push({ t: 'boss', m }); }));
+      if (zoneIdx(l) > zoneIdx(l - 1)) extra.push({ t: 'zone', i: zoneIdx(l) });
+      if (extra.length) { cur.solo = false; extra.forEach(e => qu.push(e)); }
+      qu[qu.length - 1].seen = l;
+    }
+    return qu;
+  }
+  function nextEvent(s) {
+    const e = s.ev = s.queue.shift(); s.t = 0;
+    if (e.t === 'lvl') { s.phase = 'ev'; banner(s, 'Niveau supérieur', 'Niveau ' + e.to, 'lvl'); say(s, s.name + ' passe au niveau ' + e.to + '.', 'ok'); }
+    else if (e.t === 'tier') { s.phase = 'ev'; banner(s, 'Nouveau titre', TIERS[e.i].t, 'tier'); say(s, TIERS[e.i].g + '.', 'ok'); }
+    else if (e.t === 'zone') { s.phase = 'ev'; banner(s, 'Nouvelle zone', ZONES[e.i].n, 'zone'); say(s, s.name + ' entre dans une nouvelle zone : ' + ZONES[e.i].n + '.'); }
+    else { s.m = e.m; s.mx = W + 4; s.phase = 'approach'; s.cineNext = true; banner(s, 'Boss', e.m.n, 'boss'); say(s, 'BOSS · ' + e.m.n + ' approche.', 'boss'); s.shake = s.time + .9; }
+  }
+  function endEvent(s) {
+    const e = s.ev; s.ev = null;
+    const hb = s.box && s.box.querySelector('.hud b'), hs = s.box && s.box.querySelector('.hud span');
+    if (e.t === 'lvl') { s.level = e.to; if (hb) hb.textContent = 'NIV. ' + e.to; }
+    if (e.t === 'tier') { s.tier = e.i; if (hs) hs.textContent = TIERS[e.i].t; }
+    if (e.t === 'zone') s.z = e.i;
+    if (e.seen && s.onSeen) s.onSeen(e.seen);
+    s.phase = 'walk'; s.t = 0;
+    if (!s.queue.length) s.doneAt = s.time + 1.8;
+  }
   function pick(s) {
     const ms = ZONES[s.z].m, won = ms.filter(m => m.l <= s.level), next = ms.find(m => m.l > s.level);
     s.n++;
     if (next && (!won.length || s.n % 3 === 0)) return next;
     return won.length ? won[Math.floor(Math.random() * won.length)] : next;
   }
+  function mpos(s) {
+    const m = s.m, rows = SHAPES[m.s], h = rows.length * m.sc, w = rows[0].length * m.sc, fly = m.fly ? 12 + Math.round(Math.sin(s.time * 5) * 2) : 0;
+    return { x: Math.round(s.mx), y: GY - h - fly, w, h, cy: GY - Math.min(h, 28) / 2 - fly };
+  }
+  function white(m) { if (!m._w) { m._w = {}; Object.keys(m.p).forEach(k => { m._w[k] = '#fff'; }); } return m._w; }
+  function beginFight(s, cine) {
+    const m = s.m; s.phase = 'fight'; s.t = 0; s.beat = -1; s.hits = 0; s.cine = cine; s.win = cine || m.l <= s.level;
+    s.beats = cine ? 14 : s.win ? (m.boss ? 10 : 6) : 4;
+    if (m.boss) bossbar(s, m, 1);
+  }
+  // chaque forme de monstre a sa propre attaque ; un boss place un coup spécial (chargé, plus large) un coup sur deux
+  function strike(s, p) {
+    const m = s.m, mp = mpos(s), hy = GY - 13, big = p.special, T = s.time;
+    if (p.hero) {
+      const wp = HP[s.tier].w;
+      s.fx.push({ k: 'slash', x: mp.x + 2, y: mp.cy, c: wp.c || '#d7dde3', dir: 1, big: s.tier >= 6, t0: T, d: .24 });
+      if (wp.dual) s.fx.push({ k: 'slash', x: mp.x + 5, y: mp.cy + 3, c: '#fff', dir: 1, t0: T + .06, d: .2 });
+      s.mflash = T + .1; s.sparks.push({ x: mp.x + 5, y: mp.cy, t0: T }); s.hits++;
+      if (m.boss) bossbar(s, m, s.win ? 1 - s.hits / Math.ceil(s.beats / 2) : 1 - s.hits * .06);
+      if (s.tier >= 6) s.shake = Math.max(s.shake, T + .12);
+      return;
+    }
+    let delay = 0; const c = m.p.a;
+    if (m.s === 'quad') s.fx.push({ k: 'claw', x: HX + 8, y: hy, big, t0: T, d: .3 });
+    else if (m.s === 'human') s.fx.push({ k: 'slash', x: HX + 18, y: hy, c: m.p.w, dir: -1, big, t0: T, d: .24 });
+    else if (m.s === 'slime' || m.s === 'ghost') { delay = .28; s.fx.push({ k: 'proj', x0: mp.x, y0: mp.cy, c: m.s === 'ghost' ? m.p.e : c, big, t0: T, d: delay }); }
+    else if (m.s === 'spider') s.fx.push({ k: 'beam', y: mp.cy, c: '#e6eef5', big, t0: T, d: .25 });
+    else if (m.s === 'eye') s.fx.push({ k: 'beam', y: mp.cy, c: m.p.i, big: true, wide: big, t0: T, d: .38 });
+    else if (m.s === 'bat') { delay = .2; s.fx.push({ k: 'rings', x: mp.x, y: mp.cy, c: '#fff', big, t0: T, d: .36 }); }
+    else if (m.s === 'golem') { delay = .22; s.fx.push({ k: 'quake', c: m.p.A || c, big, t0: T, d: .34 }); s.shake = T + .3; }
+    else if (m.s === 'dragon') s.fx.push({ k: 'breath', x0: mp.x + m.sc, y0: mp.y + 4 * m.sc, c: m.p.f, big, t0: T, d: .55 });
+    else if (m.s === 'tentacle') s.fx.push({ k: 'spikes', c, big, t0: T, d: .42 });
+    s.hhit = T + delay;
+    if (m.boss) s.shake = Math.max(s.shake, T + delay + (big ? .5 : .2));
+  }
+  function burst(s, m, x, y) {
+    const rows = SHAPES[m.s], sc = m.sc; s.parts = []; s.pt0 = s.time;
+    for (let j = 0; j < rows.length; j++) for (let i = 0; i < rows[j].length; i++) { const c = m.p[rows[j][i]]; if (c && (i + j) % 2 === 0) s.parts.push({ x: x + i * sc, y: y + j * sc, vx: 6 + hash(i * 7 + j) * 44, vy: -16 - hash(i + j * 5) * 56, c, s: Math.max(1, sc - 1) }); }
+  }
+  function endFight(s) {
+    const m = s.m, mp = mpos(s); s.t = 0; s.pend = null; s.charge = 0;
+    if (s.win) {
+      s.phase = 'win'; burst(s, m, mp.x, mp.y);
+      if (m.boss) { s.fx.push({ k: 'cross', x: mp.x, y: mp.y, w: mp.w, h: mp.h, t0: s.time, d: .7 }); s.shake = s.time + .55; bossbar(s, m, 0); }
+      if (s.cine) banner(s, 'Boss terrassé', m.n, 'win');
+      say(s, m.n + (m.boss ? ' terrassé.' : ' vaincu.'), 'ok');
+    } else { s.phase = 'lose'; say(s, m.n + ' est trop fort. Niveau ' + m.l + ' requis.', 'ko'); }
+  }
   function update(s, dt) {
     s.time += dt; s.t += dt;
-    const m = s.m;
+    const m = s.m, e = s.ev;
     if (s.phase === 'walk') {
       s.sx += 26 * dt;
-      if (s.t > 2.2) { s.m = pick(s); if (!s.m) { s.t = 0; return; } s.mx = W + 4; s.phase = 'approach'; s.t = 0; say(s, (s.m.boss ? 'BOSS · ' : '') + s.m.n + ' approche.', s.m.boss ? 'boss' : ''); }
+      if (s.doneAt && s.time > s.doneAt) { s.doneAt = 0; if (s.onDone) s.onDone(); return; }
+      if (s.queue.length) { if (s.t > 1) nextEvent(s); }
+      else if (!s.doneAt && s.t > 2.2) { s.m = pick(s); if (!s.m) { s.t = 0; return; } s.mx = W + 4; s.phase = 'approach'; s.t = 0; say(s, (s.m.boss ? 'BOSS · ' : '') + s.m.n + ' approche.', s.m.boss ? 'boss' : ''); }
     } else if (s.phase === 'approach') {
-      s.sx += 12 * dt; s.mx -= 70 * dt;
-      if (s.mx <= HX + 36) { s.mx = HX + 36; s.phase = 'fight'; s.t = 0; s.beat = -1; s.win = m.l <= s.level; s.beats = s.win ? (m.boss ? 10 : 6) : 4; }
+      s.sx += 12 * dt; s.mx -= (s.cineNext ? 42 : 70) * dt;
+      if (s.mx <= HX + 36) { s.mx = HX + 36; beginFight(s, !!s.cineNext); s.cineNext = false; }
     } else if (s.phase === 'fight') {
-      const b = Math.floor(s.t / .42);
+      const b = Math.floor(s.t / BEAT);
       if (b !== s.beat) {
         s.beat = b;
-        if (b >= s.beats) { s.phase = s.win ? 'win' : 'lose'; s.t = 0; say(s, s.win ? m.n + (m.boss ? ' terrassé.' : ' vaincu.') : m.n + ' est trop fort. Niveau ' + m.l + ' requis.', s.win ? 'ok' : 'ko'); }
-        else s.sparks.push(b % 2 === 0 ? { x: s.mx + 4, y: GY - 12 - (m.fly ? 12 : 0), t0: s.time + .17 } : { x: HX + 12, y: GY - 14, t0: s.time + .17 });
+        if (b >= s.beats) { endFight(s); return; }
+        const hero = b % 2 === 0, special = !hero && m.boss && ((b - 1) / 2) % 2 === 1;
+        s.pend = { at: s.time + BEAT * .45, hero, special }; if (special) s.charge = s.pend.at;
       }
-    } else if (s.phase === 'win') { if (s.t > 1.1) { s.m = null; s.phase = 'walk'; s.t = 0; } }
-    else if (s.phase === 'lose') { if (s.t > .5) s.mx += 60 * dt; if (s.t > 2) { s.m = null; s.phase = 'walk'; s.t = 0; } }
+      if (s.pend && s.time >= s.pend.at) { const p = s.pend; s.pend = null; strike(s, p); }
+    } else if (s.phase === 'win') {
+      if (s.t > (s.cine ? 2.6 : 1.2)) { bossbar(s, null); s.m = null; const c = s.cine; s.cine = false; if (c && s.ev) endEvent(s); else { s.phase = 'walk'; s.t = 0; } }
+    } else if (s.phase === 'lose') {
+      if (s.t > .5) s.mx += 60 * dt;
+      if (s.t > 2) { bossbar(s, null); s.m = null; s.phase = 'walk'; s.t = 0; }
+    } else if (s.phase === 'ev') {
+      if (e.t === 'zone') { s.sx += 70 * dt; if (s.t > 1.2 && s.z !== e.i) s.z = e.i; }
+      if (s.t > (e.t === 'tier' ? 3 : 2.4)) endEvent(s);
+    }
     s.sparks = s.sparks.filter(k => s.time < k.t0 + .2);
+    s.fx = s.fx.filter(k => s.time < k.t0 + k.d);
+  }
+  function drawFx(s, k) {
+    const T = s.time; if (T < k.t0) return;
+    const a = (T - k.t0) / k.d, mx = s.mx;
+    g.globalAlpha = Math.max(0, 1 - a);
+    if (k.k === 'slash') {
+      const r = (k.big ? 10 : 6) + a * 4;
+      for (let an = -1.2; an <= 1.2; an += .16) { R(k.c, k.x + k.dir * Math.cos(an) * r * .8, k.y + Math.sin(an) * r * 1.5, 2, 2); R('#fff', k.x + k.dir * Math.cos(an) * (r - 2) * .8, k.y + Math.sin(an) * (r - 2) * 1.5, 1, 1); }
+    } else if (k.k === 'claw') {
+      const len = Math.min(1, a * 2.5) * (k.big ? 14 : 9);
+      for (let j = 0; j < 3; j++) for (let i = 0; i < len; i++) R(j === 1 ? '#ff5d73' : '#fff', k.x - 5 + j * 4 + i * .6, k.y - 8 + i * 1.5, k.big ? 2 : 1, 2);
+    } else if (k.k === 'proj') {
+      g.globalAlpha = 1; const x = k.x0 + (HX + 12 - k.x0) * a, y = k.y0 + (GY - 13 - k.y0) * a - Math.sin(a * Math.PI) * 7, z = k.big ? 7 : 4;
+      R(k.c, x, y, z, z); R('#fff', x + 1, y + 1, z - 2, z - 2); g.globalAlpha = .5; R(k.c, x + z, y + 1, z, z - 2); R(k.c, x + z * 2, y + 2, z - 1, z - 3);
+    } else if (k.k === 'beam') {
+      const h = k.wide ? 9 : k.big ? 5 : 2, x0 = HX + 12, len = mx - x0 + 2;
+      g.globalAlpha = (1 - a) * .5; R(k.c, x0, k.y - h, len, h * 2); g.globalAlpha = 1 - a; R(k.c, x0, k.y - h / 2, len, h); R('#fff', x0, k.y - Math.max(1, h / 4), len, Math.max(1, Math.round(h / 2)));
+    } else if (k.k === 'rings') {
+      g.globalAlpha = 1;
+      for (let n = 0; n < 3; n++) { const p = a * 1.3 - n * .2; if (p > 0 && p < 1) { const x = k.x - p * (k.x - HX - 12), z = k.big ? 9 : 5; R(k.c, x, k.y - z, 1, z * 2); R(k.c, x + 1, k.y - z - 2, 1, 2); R(k.c, x + 1, k.y + z, 1, 2); } }
+    } else if (k.k === 'quake') {
+      g.globalAlpha = 1; const fx0 = mx - a * (mx - HX - 6), u = k.big ? 4 : 2;
+      for (let i = 0; i < 5; i++) R(i % 2 ? k.c : '#fff', fx0 + i * 3, GY - (5 - i) * u, 2, (5 - i) * u);
+      g.globalAlpha = .5; R('#fff', fx0 - 4, GY - 1, 22, 1);
+    } else if (k.k === 'breath') {
+      g.globalAlpha = 1; const reach = Math.min(1, a * 2.6);
+      for (let i = 0; i < 30; i++) { const f = i / 30; if (f > reach) break; const j = hash(i + Math.floor(T * 24)) - .5; R(i % 3 ? k.c : '#ffd84a', k.x0 - (k.x0 - HX - 8) * f, k.y0 + (GY - 14 - k.y0) * f + j * (k.big ? 14 : 8) * (f + .2), k.big ? 3 : 2, k.big ? 3 : 2); }
+    } else if (k.k === 'spikes') {
+      g.globalAlpha = 1; const hg = Math.sin(a * Math.PI) * (k.big ? 30 : 16);
+      for (let j = 0; j < (k.big ? 5 : 3); j++) { const x = HX + (k.big ? -4 : 3) + j * 6, hh = hg * (j % 2 ? .7 : 1); R(k.c, x, GY - hh, 3, hh); R('#fff', x + 1, GY - hh - 1, 1, 2); }
+    } else if (k.k === 'cross') {
+      g.globalAlpha = (1 - a) * .7; R('#fff', 0, 0, W, H); g.globalAlpha = 1 - a;
+      const n = Math.max(k.w, k.h) + 12;
+      for (let i = 0; i < n * Math.min(1, a * 4); i++) { R('#fff', k.x - 6 + i * (k.w + 12) / n, k.y - 6 + i * (k.h + 12) / n, 3, 3); R('#9ad6ff', k.x + k.w + 6 - i * (k.w + 12) / n, k.y - 6 + i * (k.h + 12) / n, 3, 3); }
+    }
+    g.globalAlpha = 1;
   }
   function draw(s) {
-    g = s.ctx; const m = s.m;
-    BG[s.z](s.sx, s.time);
-    const walking = s.phase === 'walk' || s.phase === 'approach';
-    const fr = walking ? Math.floor(s.time * 6) % 2 : 0;
-    let hx = HX, atk = false, mxo = 0, hide = false, mhide = false;
-    if (s.phase === 'fight') { const k = (s.t % .42) / .42, lun = Math.sin(k * Math.PI) * 7; if (s.beat % 2 === 0) { hx += lun; atk = k > .2 && k < .85; } else mxo = -lun; }
-    if (s.phase === 'win') mhide = Math.floor(s.t * 14) % 2 === 0;
-    if (s.phase === 'lose') { hx -= Math.min(1, s.t / .25) * 14 * (1 - Math.max(0, Math.min(1, (s.t - 1.2) / .6))); hide = s.t < 1.1 && Math.floor(s.t * 14) % 2 === 0; }
-    if (m && !mhide) {
-      const rows = SHAPES[m.s], h = rows.length * m.sc, w = rows[0].length * m.sc;
-      const fly = m.fly ? 12 + Math.round(Math.sin(s.time * 5) * 2) : 0, mb = (!m.fly && s.phase !== 'fight' && Math.floor(s.time * 6) % 2) ? 1 : 0;
-      const x = Math.round(s.mx + mxo), y = GY - h - fly - mb;
-      if (m.boss) for (let k = 0; k < 14; k++) { const n = k + Math.floor(s.time * 6) * 17; R(k % 2 ? '#ff5d73' : '#ffd84a', x - 4 + hash(n) * (w + 8), y - 5 + hash(n + 3) * (h + 5), 1, 1); }
-      spr(rows, m.p, x, y, m.sc);
+    g = s.ctx; const m = s.m, e = s.ev, T = s.time;
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    if (T < s.shake) { R('#000', 0, 0, W, H); const q0 = Math.floor(T * 40); g.setTransform(1, 0, 0, 1, Math.round((hash(q0) - .5) * 4), Math.round((hash(q0 + 9) - .5) * 4)); }
+    BG[s.z](s.sx, T);
+    const inEv = s.phase === 'ev', walking = s.phase === 'walk' || s.phase === 'approach' || (inEv && e.t === 'zone');
+    const fr = walking ? Math.floor(T * 6) % 2 : 0;
+    let hx = HX, atk = false, mxo = 0, hide = false, tier = s.tier;
+    if (s.phase === 'fight') {
+      const k = (s.t % BEAT) / BEAT, lun = k < .3 ? -3 * (k / .3) : k < .5 ? -3 + 13 * ((k - .3) / .2) : 10 * (1 - (k - .5) / .5);
+      if (s.beat % 2 === 0) { hx += lun; atk = k > .38 && k < .8; } else mxo = -lun;
     }
-    if (!hide) drawHero(Math.round(hx), GY - 26 - (walking && fr ? 1 : 0), 2, s.tier, fr, atk, s.time);
-    s.sparks.forEach(k => { if (s.time >= k.t0) { R('#fff', k.x - 3, k.y, 7, 1); R('#fff', k.x, k.y - 3, 1, 7); R('#ffd84a', k.x - 2, k.y - 2, 1, 1); R('#ffd84a', k.x + 2, k.y + 2, 1, 1); R('#ffd84a', k.x + 2, k.y - 2, 1, 1); R('#ffd84a', k.x - 2, k.y + 2, 1, 1); } });
+    if (T >= s.hhit && T < s.hhit + .16) { hx -= 3; hide = Math.floor(T * 30) % 2 === 0; }
+    if (s.phase === 'lose') { hx -= Math.min(1, s.t / .25) * 14 * (1 - Math.max(0, Math.min(1, (s.t - 1.2) / .6))); hide = s.t < 1.1 && Math.floor(s.t * 14) % 2 === 0; }
+    if (inEv && e.t === 'tier') tier = s.t < 1.6 ? (Math.floor(s.t * (4 + s.t * 9)) % 2 ? e.i : s.tier) : e.i;
+    if (s.phase === 'approach' && s.cineNext) { g.globalAlpha = .3 + Math.sin(T * 12) * .25; R('#ff5d73', 0, 0, W, 4); R('#ff5d73', 0, H - 4, W, 4); g.globalAlpha = 1; }
+    if (m && s.phase !== 'win') {
+      const mp = mpos(s), rows = SHAPES[m.s], mb = (!m.fly && s.phase !== 'fight' && Math.floor(T * 6) % 2) ? 1 : 0, x = mp.x + Math.round(mxo);
+      if (T < s.charge) { const a = 1 - (s.charge - T) / (BEAT * .45); g.globalAlpha = .1; R('#ff5d73', 0, 0, W, H); g.globalAlpha = .2 + a * .35; disc(x + mp.w / 2, mp.y + mp.h / 2, Math.round(6 + a * Math.max(mp.w, mp.h) * .6), '#ff5d73'); g.globalAlpha = 1; }
+      if (m.boss) for (let k = 0; k < 14; k++) { const n = k + Math.floor(T * 6) * 17; R(k % 2 ? '#ff5d73' : '#ffd84a', x - 4 + hash(n) * (mp.w + 8), mp.y - 5 + hash(n + 3) * (mp.h + 5), 1, 1); }
+      spr(rows, T < s.mflash ? white(m) : m.p, x, mp.y - mb, m.sc);
+    }
+    if (inEv && e.t === 'lvl') {
+      const a = Math.min(1, s.t / .4) * (1 - Math.max(0, (s.t - 1.9) / .5));
+      g.globalAlpha = .28 * a; R('#4da3ff', hx - 6, 0, 32, GY); g.globalAlpha = .35 * a; R('#e6f4ff', hx + 3, 0, 14, GY); g.globalAlpha = a;
+      for (let i = 0; i < 16; i++) R(i % 2 ? '#fff' : '#9ad6ff', hx - 4 + hash(i) * 28, GY - ((s.t * 60 * (1 + hash(i + 3)) + hash(i + 7) * GY) % GY), 1, 3);
+      const r = (s.t * 30) % 26; R('#fff', hx + 10 - r, GY - 1, r * 2, 1); g.globalAlpha = 1;
+    }
+    if (!hide) drawHero(Math.round(hx), GY - 26 - (walking && fr ? 1 : 0), 2, tier, fr, atk, T);
+    s.fx.forEach(k => drawFx(s, k));
+    if (s.parts.length) { const ag = T - s.pt0; if (ag > 1.3) s.parts = []; else { g.globalAlpha = Math.max(0, 1 - ag / 1.3); s.parts.forEach(p => R(p.c, p.x + p.vx * ag, p.y + p.vy * ag + 70 * ag * ag, p.s, p.s)); g.globalAlpha = 1; } }
+    s.sparks.forEach(k => { if (T >= k.t0) { R('#fff', k.x - 3, k.y, 7, 1); R('#fff', k.x, k.y - 3, 1, 7); R('#ffd84a', k.x - 2, k.y - 2, 1, 1); R('#ffd84a', k.x + 2, k.y + 2, 1, 1); R('#ffd84a', k.x + 2, k.y - 2, 1, 1); R('#ffd84a', k.x - 2, k.y + 2, 1, 1); } });
+    if (inEv && e.t === 'tier') {
+      const f = Math.max(0, 1 - Math.abs(s.t - 1.6) / .3);
+      if (f) { g.globalAlpha = f * .9; R('#fff', 0, 0, W, H); g.globalAlpha = 1; }
+      if (s.t > 1.6 && s.t < 2.6) { g.globalAlpha = 1 - (s.t - 1.6); const d = (s.t - 1.6) * 60; for (let i = 0; i < 14; i++) { const an = i / 14 * Math.PI * 2; R(i % 2 ? '#c4b5ff' : '#fff', hx + 10 + Math.cos(an) * d, GY - 13 + Math.sin(an) * d, 2, 2); } g.globalAlpha = 1; }
+    }
+    if (inEv && e.t === 'zone') { g.globalAlpha = s.t < 1.2 ? s.t / 1.2 : Math.max(0, 1 - (s.t - 1.2) / 1.2); R('#000', 0, 0, W, H); g.globalAlpha = 1; }
+    g.setTransform(1, 0, 0, 1, 0, 0);
   }
   function stop() { if (raf) cancelAnimationFrame(raf); raf = 0; st = null; }
-  function start(canvas, level, cap) {
+  function start(canvas, o) {
     stop();
     canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
-    const s = st = { canvas, ctx, cap, level, z: zoneIdx(level), tier: tierIdx(level), phase: 'walk', t: 0, time: 0, sx: 0, m: null, mx: 0, sparks: [], n: 0 };
+    let level = o.level; const target = Math.max(level, o.target || level);
     const still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (still && target > level) { level = target; if (o.onSeen) o.onSeen(target); }   // sans animations : on acte directement
+    const s = st = { canvas, ctx, box: canvas.parentNode, cap: o.cap, name: o.name || 'Le héros', onSeen: o.onSeen, onDone: o.onDone, level, z: zoneIdx(level), tier: tierIdx(level),
+      queue: buildQueue(level, target), ev: null, phase: 'walk', t: 0, time: 0, sx: 0, m: null, mx: 0, sparks: [], fx: [], parts: [], pt0: 0, n: 0, shake: 0, mflash: 0, hhit: -9, charge: 0, hits: 0, doneAt: 0 };
     let last = performance.now();
     const loop = now => {
       if (st !== s || !canvas.isConnected) { if (st === s) stop(); return; }
       const dt = Math.min(.05, (now - last) / 1000); last = now;
-      if (!document.hidden) { update(s, dt); draw(s); }
-      raf = requestAnimationFrame(loop);
+      if (!document.hidden) { update(s, dt); if (st === s) draw(s); }
+      if (st === s) raf = requestAnimationFrame(loop);
     };
     draw(s);
     if (!still) raf = requestAnimationFrame(loop);
@@ -386,5 +553,5 @@
     drawHero(11, 20, 2, tierIdx(level), 0, false, 0);
   }
 
-  window.RPG = { MAX, need, levelOf, streakMult, sessionXp, TIERS, ZONES, tierIdx, zoneIdx, start, stop, portrait, tick: dt => { if (st) { update(st, dt); draw(st); } } };
+  window.RPG = { MAX, need, levelOf, streakMult, sessionXp, TIERS, ZONES, tierIdx, zoneIdx, buildQueue, start, stop, portrait, tick: dt => { const s = st; if (s) { update(s, dt); if (st === s) draw(s); } } };
 })();
