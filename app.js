@@ -16,6 +16,7 @@
   const pad = n => String(n).padStart(2, '0');
   const isoDay = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const todayISO = () => isoDay(new Date());
+  const logDay = l => isoDay(new Date(l.date));
   const fdate = iso => { const d = new Date(iso); return `${DAYS[(d.getDay() + 6) % 7].slice(0, 3)}. ${d.getDate()} ${MONTHS[d.getMonth()]}`; };
   const norm = s => String(s || '').toLowerCase().replace(/^[a-z]\d\s*·\s*/, '').replace(/[^a-z0-9àâçéèêëîïôûùüÿ]+/g, ' ').trim();
 
@@ -26,7 +27,9 @@
       const p = s.programs.find(x => x.id === 'athletique'); if (!p) return;
       const i = p.ex.findIndex(e => norm(e.n) === 'med ball slams');
       if (i >= 0) p.ex.splice(i, 1, { id: p.ex[i].id, sec: p.ex[i].sec, n: 'Skips (montées de genoux explosives)', sets: 3, reps: '15 m', rest: 60, start: '', note: 'Appuis légers et rapides, à faire dehors. Pas de réception violente (genou).', kind: 'b', key: false });
-    }
+    },
+    // 2 : XP rétroactive pour les séances faites avant l'arrivée de l'aventure (3 XP par série, sans bonus)
+    s => { s.logs.forEach(l => { if (l.xp == null) { l.xp = l.ex.reduce((n, e) => n + Math.min(8, e.sets.length) * 3, 0); l.streak = l.streak || 1; l.mult = 1; } }); }
   ];
   function migrate(s) { for (let i = s.patchV || 0; i < PATCHES.length; i++) { try { PATCHES[i](s); } catch (e) { } } s.patchV = PATCHES.length; return s; }
 
@@ -41,7 +44,7 @@
     const s = fresh(), h = o.profiles && o.profiles.him;
     if (h) { s.name = h.name || s.name; s.logs = h.logs || []; s.body = h.body || []; }
     if (o.opts) s.opts = o.opts;
-    return s;
+    s.patchV = 0; return migrate(s);
   }
   function load() {
     try {
@@ -58,7 +61,7 @@
   save();
   window.addEventListener('pagehide', save);
   document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
-  const progById = id => S.programs.find(p => p.id === id);
+  const progById = id => id === '__spam' ? (S.cur && S.cur.spamProg) || undefined : S.programs.find(p => p.id === id);
   const V = { tab: 'home', stack: [] };
   const top = () => V.stack[V.stack.length - 1];
 
@@ -105,7 +108,7 @@
     up: '<path d="M6 15l6-6 6 6"/>', down: '<path d="M6 9l6 6 6-6"/>',
     trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
     edit: '<path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"/>',
-    check: '<path d="M4 12l5 5L20 6"/>', plus: '<path d="M12 5v14M5 12h14"/>', copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10a1 1 0 001 1h3"/>'
+    check: '<path d="M4 12l5 5L20 6"/>', sword: '<path d="M20 4L9.5 14.5M20 4h-5M20 4v5M6.5 11.5l6 6M8 16l-4 4"/>', plus: '<path d="M12 5v14M5 12h14"/>', copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10a1 1 0 001 1h3"/>'
   };
   const svg = (n, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${I[n]}</svg>`;
 
@@ -120,19 +123,20 @@
     const y = window.scrollY, v = top();
     let body;
     if (v) body = v.t === 'prog' ? progView(v) : v.t === 'edit' ? editView(v) : workView();
-    else body = ({ home: homeView, progs: progsView, track: trackView, guide: guideView, more: moreView })[V.tab]();
+    else body = ({ home: homeView, progs: progsView, adv: advView, track: trackView, guide: guideView, more: moreView })[V.tab]();
     $('#app').innerHTML = (v ? '' : header()) + `<main class="${v ? 'sub' : ''}">${body}</main>` + (v ? '' : nav());
     window.scrollTo(0, y);
     if (v && v.t === 'work') ensureWake(); else releaseWake();
     updateTimerUI();
+    mountGame();
   }
   function header() {
     const d = new Date();
     return `<header class="hdr"><div class="logo"><img src="icons/icon.svg" alt="" width="30" height="30"><b>Entraînement</b></div>
-      <span class="date">${DAYS[(d.getDay() + 6) % 7].slice(0, 3)}. ${d.getDate()} ${MONTHS[d.getMonth()]}</span></header>`;
+      <div class="row" style="gap:12px"><span class="date">${DAYS[(d.getDay() + 6) % 7].slice(0, 3)}. ${d.getDate()} ${MONTHS[d.getMonth()]}</span><button class="ic sm" data-act="tab" data-t="more" aria-label="Réglages">${svg('gear')}</button></div></header>`;
   }
   function nav() {
-    const t = [['home', 'Accueil', 'home'], ['progs', 'Séances', 'list'], ['track', 'Suivi', 'chart'], ['guide', 'Guide', 'book'], ['more', 'Réglages', 'gear']];
+    const t = [['home', 'Accueil', 'home'], ['progs', 'Séances', 'list'], ['adv', 'Aventure', 'sword'], ['track', 'Suivi', 'chart'], ['guide', 'Guide', 'book']];
     return `<nav>${t.map(([k, l, ic]) => `<button class="${V.tab === k ? 'on' : ''}" data-act="tab" data-t="${k}">${svg(ic)}<span>${l}</span></button>`).join('')}</nav>`;
   }
 
@@ -140,12 +144,12 @@
   function homeView() {
     const now = new Date(), di = (now.getDay() + 6) % 7, day = S.week[di], prog = day.p && progById(day.p);
     const hasCur = S.cur && progById(S.cur.prog);
-    const doneToday = S.logs.some(l => l.date.slice(0, 10) === todayISO());
+    const doneToday = S.logs.some(l => logDay(l) === todayISO());
     const mon = new Date(now); mon.setDate(now.getDate() - di);
     let planned = 0, did = 0;
     const wk = S.week.map((d, i) => {
       const dt = new Date(mon); dt.setDate(mon.getDate() + i);
-      const done = S.logs.some(l => l.date.slice(0, 10) === isoDay(dt));
+      const done = S.logs.some(l => logDay(l) === isoDay(dt));
       if (d.p) planned++; if (done) did++;
       return `<div class="day ${d.p ? 'has' : ''} ${done ? 'done' : ''} ${i === di ? 'today' : ''}"><span>${D1[i]}</span><i></i></div>`;
     }).join('');
@@ -171,7 +175,12 @@
     const bw = S.body.slice().sort((a, b) => a.d.localeCompare(b.d)).pop();
     const nudge = (S.logs.length >= 3 && Date.now() - (S.lastBackup || 0) > 14 * 864e5)
       ? `<div class="card nudge"><div><b>Sauvegarde conseillée</b><p class="mut">${S.lastBackup ? 'Dernière il y a ' + Math.round((Date.now() - S.lastBackup) / 864e5) + ' jours.' : 'Aucune sauvegarde pour l\'instant.'}</p></div><button class="btn sm" data-act="export">Exporter</button></div>` : '';
-    return `${hero}${nudge}
+    const xp = totalXp(), L = RPG.levelOf(xp), xa = RPG.need(L), xb = RPG.need(L + 1), stk = streakNow();
+    const spamBtn = hasCur ? '' : `<button class="btn xl ghost spam" data-act="spam">Salle bondée ? Séance spam</button>`;
+    const adv = `<button class="card advstrip" data-act="tab" data-t="adv"><canvas data-me class="px" width="30" height="36"></canvas>
+      <div class="grow"><div class="eyebrow">Niveau ${L} · ${RPG.TIERS[RPG.tierIdx(L)].t}</div><div class="xp"><i style="width:${Math.round((xp - xa) / (xb - xa) * 100)}%"></i></div>
+      <p class="mut">${xp - xa} / ${xb - xa} XP${stk > 1 ? ' · série de ' + stk : ''}</p></div>${svg('go', 'go')}</button>`;
+    return `${hero}${spamBtn}${adv}${nudge}
       <div class="sect-h"><h2>La semaine</h2><button class="btn sm ghost" data-act="weekEdit">${svg('edit')}Modifier</button></div>
       <div class="week">${wk}</div>
       <div class="stats">
@@ -304,8 +313,9 @@
     const recs = recordsList().slice(0, 10).map(r => `<div class="rk"><div class="grow"><b>${esc(r.n)}</b><div class="mut" style="font-size:12px">${fdate(r.d)}</div></div><b class="v">${fw(r.w)} kg <small>× ${esc(r.r)}</small></b></div>`).join('');
     const hist = S.logs.slice().reverse().slice(0, 30).map(l => {
       const vol = l.ex.reduce((a, e) => a + e.sets.reduce((b, s) => b + (num(s.w) || 0) * (num(s.r) || 0), 0), 0);
-      return `<details class="g hist"><summary><div class="grow"><b>${esc(l.name)}</b><div class="d">${fdate(l.date)} · ${l.dur} min · ${(vol / 1000).toFixed(1).replace('.', ',')} t</div></div></summary>
+      return `<details class="g hist"><summary><div class="grow"><b>${esc(l.name)}</b><div class="d">${fdate(l.date)} · ${l.dur} min · ${(vol / 1000).toFixed(1).replace('.', ',')} t${l.xp ? ' · +' + l.xp + ' XP' : ''}</div></div></summary>
         <ul>${l.ex.filter(e => e.sets.length).map(e => `<li><b>${esc(e.n)}</b> — ${e.sets.map(s => (s.w !== '' && s.w != null ? fw(s.w) + '×' : '') + s.r).join(' · ')}</li>`).join('')}</ul>
+        ${l.coach ? `<p class="note" style="margin:0 15px 12px">${esc(l.coach)}</p>` : ''}
         <div style="padding:0 15px 13px"><button class="btn sm dng" data-act="logDel" data-id="${l.id}">Supprimer</button></div></details>`;
     }).join('');
     return `<div class="sect-h first"><h2>Poids & mesures</h2><button class="btn sm pri" data-act="bodyAdd">${svg('plus')} Pesée</button></div>
@@ -332,6 +342,56 @@
       if (!best[k] || w > best[k].w || (w === best[k].w && num(s.r) > num(best[k].r))) best[k] = { n: e.n, w, r: s.r, d: l.date };
     })));
     return Object.values(best).sort((a, b) => b.w - a.w);
+  }
+
+  /* ----- Aventure ----- */
+  const totalXp = () => S.logs.reduce((n, l) => n + (l.xp || 0), 0);
+  // série = jours d'entraînement consécutifs ; un jour de repos prévu au planning (ou une séance optionnelle) ne la casse pas
+  function streakNow() {
+    const days = new Set(S.logs.map(logDay));
+    const planned = d => { const w = S.week[(d.getDay() + 6) % 7], p = w && w.p && S.programs.find(x => x.id === w.p); return !!p && !p.opt; };
+    const d = new Date(); let n = days.has(isoDay(d)) ? 1 : 0;
+    for (let i = 0; i < 120; i++) { d.setDate(d.getDate() - 1); if (days.has(isoDay(d))) n++; else if (planned(d)) break; }
+    return n;
+  }
+  function badges() {
+    const maxSt = Math.max(0, ...S.logs.map(l => l.streak || 0)), spam = S.logs.filter(l => l.spam).length, full = S.logs.filter(l => l.full).length, rec = S.logs.reduce((n, l) => n + (l.rec || 0), 0);
+    return [['Régulier', 'Série de 5 séances', maxSt >= 5], ['Inarrêtable', 'Série de 10 séances', maxSt >= 10], ['Sans faute', '10 séances complètes', full >= 10],
+      ['Briseur de records', '10 records battus', rec >= 10], ['Roi du spam', '5 séances spam', spam >= 5], ['Centurion', '100 séances', S.logs.length >= 100]];
+  }
+  function mountGame() {
+    const L = RPG.levelOf(totalXp());
+    document.querySelectorAll('canvas[data-me]').forEach(c => RPG.portrait(c, L));
+    const c = $('#adv'); if (c) RPG.start(c, L, $('#advcap')); else RPG.stop();
+  }
+  function advView() {
+    const xp = totalXp(), L = RPG.levelOf(xp), xa = RPG.need(L), xb = RPG.need(L + 1), ti = RPG.tierIdx(L), zi = RPG.zoneIdx(L);
+    const stk = streakNow(), today = S.logs.some(l => logDay(l) === todayISO()), nextMult = RPG.streakMult(Math.max(1, today ? stk : stk + 1));
+    const beaten = RPG.ZONES.reduce((n, z) => n + z.m.filter(m => m.l <= L).length, 0), total = RPG.ZONES.reduce((n, z) => n + z.m.length, 0);
+    const zones = RPG.ZONES.map((z, i) => {
+      const open = L >= z.l, done = z.m.every(m => m.l <= L);
+      return `<div class="zone ${open ? '' : 'lock'} ${i === zi ? 'cur' : ''}"><div class="row sp"><b>${open ? esc(z.n) : 'Zone inconnue'}</b><span class="chip ${done ? 'ok' : ''}">${done ? 'Terminée' : open ? 'En cours' : 'Niveau ' + z.l}</span></div>
+        ${open ? `<ul>${z.m.map(m => `<li class="${m.l <= L ? 'won' : ''}"><span>${esc(m.n)}</span><small>${m.l <= L ? 'vaincu' : 'niveau ' + m.l}</small></li>`).join('')}</ul>` : ''}</div>`;
+    }).join('');
+    const tiers = RPG.TIERS.map((t, i) => `<div class="rk"><div class="grow"><b>${L >= t.l ? esc(t.t) : '???'}</b><div class="mut" style="font-size:12.5px">${L >= t.l ? esc(t.g) : 'Se débloque au niveau ' + t.l}</div></div>${i === ti ? '<span class="tagc">Actuel</span>' : ''}</div>`).join('');
+    const bd = badges().map(b => `<div class="rk"><div class="grow"><b class="${b[2] ? '' : 'mut'}">${b[0]}</b><div class="mut" style="font-size:12.5px">${b[1]}</div></div>${b[2] ? '<span class="chip ok">Obtenu</span>' : ''}</div>`).join('');
+    return `<div class="sect-h first"><h2>Aventure</h2><span class="chip">${esc(RPG.ZONES[zi].n)}</span></div>
+      <div class="scene"><canvas id="adv" width="192" height="108"></canvas><div id="advcap" class="cap">${esc(S.name)} avance dans ${esc(RPG.ZONES[zi].n.toLowerCase())}.</div></div>
+      <div class="card me"><canvas data-me class="px" width="30" height="36"></canvas><div class="grow"><div class="eyebrow">Niveau ${L}</div><h3>${esc(S.name)}, ${esc(RPG.TIERS[ti].t)}</h3>
+        <div class="xp"><i style="width:${Math.round((xp - xa) / (xb - xa) * 100)}%"></i></div><p class="mut" style="font-size:12.5px">${xp - xa} / ${xb - xa} XP · niveau ${L + 1} dans ${xb - xp} XP</p></div></div>
+      <div class="stats">
+        <div class="stat"><b>${stk}</b><span>série en cours</span></div>
+        <div class="stat"><b>×${fw(nextMult)}</b><span>prochaine séance</span></div>
+        <div class="stat"><b>${beaten}<small>/${total}</small></b><span>monstres vaincus</span></div>
+      </div>
+      <details class="g"><summary>Comment gagner de l'XP</summary><ul>
+        <li><b>3 XP</b> par série validée, <b>2 XP</b> par échauffement, <b>+15</b> si la séance est faite en entier, <b>+5</b> par record.</li>
+        <li>Le total est multiplié par ta série : ×1 le premier jour, puis +0,25 par jour d'entraînement d'affilée, jusqu'à ×2,5.</li>
+        <li>Un jour de repos prévu au planning ne casse pas la série. Un jour de séance prévu et sauté la remet à zéro.</li>
+        <li>Une séance spam compte comme les autres : ce sont les séries validées qui paient.</li></ul></details>
+      <div class="sect-h"><h2>Le voyage</h2></div>${zones}
+      <div class="sect-h"><h2>Équipement</h2></div>${tiers}
+      <div class="sect-h"><h2>Titres</h2></div>${bd}`;
   }
 
   /* ----- Guide ----- */
@@ -428,13 +488,40 @@
     }
     T = null; go({ t: 'work' });
   }
+  // le mot du coach : dépend de ce qui a réellement été fait
+  function coachLine(o) {
+    const pick = arr => arr[S.logs.length % arr.length];
+    let s;
+    if (!o.sets) s = 'Rien de validé aujourd\'hui. Ça arrive, mais on ne va pas se mentir : celle-là ne compte pas. On se revoit à la prochaine.';
+    else if (o.spam) s = o.sets < 5
+      ? `Salle pleine et ${o.sets} séries seulement sur ${o.names}. C'est fait, mais en spam vise au moins 5 séries par mouvement pour que ça pèse.`
+      : pick([`Salle pleine, et tu as quand même sorti ${o.sets} séries sur ${o.names}. Bon réflexe : du volume sur un gros mouvement vaut mieux qu'une séance annulée.`,
+        `${o.sets} séries sur ${o.names}. Simple et efficace. Surveille la qualité des dernières : quand la technique part, tu arrêtes.`,
+        `Tu as transformé une salle bondée en vraie séance : ${o.sets} séries sur ${o.names}. La prochaine fois, change de mouvement pour ne pas toujours taper les mêmes articulations.`]);
+    else if (o.full) s = pick(['Séance complète, du premier au dernier exercice. Rien à redire. Mange tes protéines et dors.',
+      'Tout est coché. C\'est avec des séances comme celle-là, répétées, que le physique change.',
+      'Carton plein. Si les dernières séries étaient faciles, on monte la charge la prochaine fois.']);
+    else if (o.coreTotal && o.coreDone < o.coreTotal) s = pick(['Séance incomplète et le noyau n\'est pas terminé. Ça arrive. La prochaine fois, tu commences par le haut de la liste et tu ne lâches pas les deux premiers.',
+      `${o.doneEx} exercice${o.doneEx > 1 ? 's' : ''} sur ${o.totalEx}, et le noyau n'est pas bouclé. Tu es venu, c'est déjà ça, mais ce sont les deux premiers mouvements qui font progresser.`]);
+    else if (o.coreTotal && o.doneEx <= o.coreTotal) s = pick(['Noyau fait, le reste sauté. Ça reste une vraie séance de 20 minutes : l\'essentiel est là.',
+      'Tu as fait les deux mouvements qui comptent. Mieux vaut ça que rien, mais ne laisse pas les accessoires sauter trois fois de suite : tes épaules et ton tirage en ont besoin.']);
+    else s = pick([`${o.doneEx} exercices sur ${o.totalEx}, les plus importants d'abord. Tu as coupé par le bas, c'est la bonne façon de raccourcir.`,
+      `${o.doneEx} exercices sur ${o.totalEx}. Bonne séance. Il manque la fin : si c'est le temps qui a manqué, enchaîne les supersets sans traîner la prochaine fois.`]);
+    if (o.records) s += o.records > 1 ? ` Et ${o.records} records au passage.` : ' Et un record au passage.';
+    if (o.streak >= 3) s += ` ${o.streak} jours d'entraînement d'affilée : garde ce rythme.`;
+    return s;
+  }
   function finish() {
-    const pr = progById(S.cur.prog);
+    const pr = progById(S.cur.prog), spam = !!pr.spam, work = pr.ex.filter(e => e.kind !== 'c');
+    const nDone = e => (S.cur.sets[e.id] || []).filter(s => s.d).length, planned = e => Math.max(1, e.sets | 0);
     const ex = pr.ex.map(e => ({
       id: e.id, n: e.n,
       sets: (e.kind === 'c' ? [] : (S.cur.sets[e.id] || [])).filter(s => s.d).map(s => ({ w: e.kind === 'w' ? (s.w === '' ? '' : (num(s.w) || '')) : '', r: s.r }))
     }));
-    const doneCount = ex.reduce((a, e) => a + e.sets.length, 0) + pr.ex.filter(e => e.kind === 'c' && setsDone(e)).length;
+    const warm = pr.ex.filter(e => e.kind === 'c' && setsDone(e)).length;
+    const allSets = work.reduce((n, e) => n + nDone(e), 0), xpSets = work.reduce((n, e) => n + Math.min(8, nDone(e)), 0);
+    const doneEx = work.filter(e => nDone(e) > 0).length, full = !spam && work.length > 0 && work.every(e => nDone(e) >= planned(e));
+    const core = work.filter(e => e.key), coreDone = core.filter(e => nDone(e) >= planned(e)).length;
     const doRecords = [];
     ex.forEach(e => {
       const best = Math.max(0, ...e.sets.map(s => num(s.w) || 0));
@@ -444,14 +531,22 @@
     });
     const dur = Math.max(1, Math.round((Date.now() - S.cur.start) / 60000));
     const vol = ex.reduce((a, e) => a + e.sets.reduce((b, s) => b + (num(s.w) || 0) * (num(s.r) || 0), 0), 0);
-    S.logs.push({ id: uid(), date: new Date().toISOString(), prog: pr.id, name: pr.name, dur, ex });
+    const lvl0 = RPG.levelOf(totalXp());
+    const log = { id: uid(), date: new Date().toISOString(), prog: pr.id, name: spam ? 'Spam · ' + pr.tag : pr.name, dur, ex, spam, full, rec: doRecords.length };
+    S.logs.push(log);
+    const streak = streakNow(), gain = RPG.sessionXp({ sets: xpSets, warm, full, records: doRecords.length, streak });
+    log.xp = gain.xp; log.streak = streak; log.mult = gain.mult;
+    log.coach = coachLine({ sets: allSets, spam, names: pr.tag, full, doneEx, totalEx: work.length, coreDone, coreTotal: core.length, records: doRecords.length, streak });
+    const lvl1 = RPG.levelOf(totalXp()), newTier = RPG.tierIdx(lvl1) > RPG.tierIdx(lvl0), newZone = RPG.zoneIdx(lvl1) > RPG.zoneIdx(lvl0);
     S.cur = null; T = null; save();
     V.stack = []; V.tab = 'home'; render(); window.scrollTo(0, 0);
-    openSheet(`<div class="win"><div class="eyebrow">Séance enregistrée</div><h2 style="font-size:34px;margin:6px 0">${esc(pr.name)}</h2>
-      <p class="mut">${doRecords.length ? doRecords.length + (doRecords.length > 1 ? ' nouveaux records' : ' nouveau record') : 'Bien joué, ' + esc(S.name) + '.'}</p>
-      <div class="g"><div class="stat"><b>${dur}</b><span>minutes</span></div><div class="stat"><b>${doneCount}</b><span>séries</span></div><div class="stat"><b>${(vol / 1000).toFixed(1).replace('.', ',')}</b><span>tonnes</span></div></div>
+    openSheet(`<div class="win"><div class="eyebrow">Séance enregistrée</div><h2 style="font-size:30px;margin:6px 0">${esc(log.name)}</h2>
+      <div class="g"><div class="stat"><b>${dur}</b><span>minutes</span></div><div class="stat"><b>${allSets + warm}</b><span>séries</span></div><div class="stat"><b>${(vol / 1000).toFixed(1).replace('.', ',')}</b><span>tonnes</span></div></div>
+      <div class="coach"><div class="eyebrow">Le coach</div><p>${esc(log.coach)}</p></div>
+      <div class="xpgain"><b>+${gain.xp} XP</b><span>${gain.base} × ${fw(gain.mult)} · série de ${streak}</span></div>
+      ${lvl1 > lvl0 ? `<div class="lvlup">Niveau ${lvl1} atteint${newTier ? ' · nouveau titre : ' + esc(RPG.TIERS[RPG.tierIdx(lvl1)].t) : ''}${newZone ? ' · nouvelle zone : ' + esc(RPG.ZONES[RPG.zoneIdx(lvl1)].n) : ''}</div>` : ''}
       ${doRecords.map(r => `<div class="rec"><span>${esc(r.n)}</span><span>${fw(r.was)} → <b>${fw(r.w)} kg</b></span></div>`).join('')}
-      <button class="btn pri xl" style="margin-top:12px" data-act="sheetX">Fermer</button></div>`);
+      <div class="g2" style="margin-top:12px"><button class="btn" data-act="toAdv">Voir l'aventure</button><button class="btn pri" data-act="sheetX">Fermer</button></div></div>`);
   }
 
   /* ---------- sauvegarde / import ---------- */
@@ -463,6 +558,31 @@
 
   /* ---------- actions ---------- */
   const A = {
+    toAdv() { closeSheet(); setTab('adv'); },
+    spam() {
+      const seen = {}, list = [];
+      S.programs.forEach(p => p.ex.forEach(e => { const k = norm(e.n); if (e.kind !== 'c' && !seen[k]) { seen[k] = 1; list.push(e); } }));
+      list.sort((x, y) => (y.key ? 1 : 0) - (x.key ? 1 : 0));
+      openSheet(`<h2>Séance spam</h2><p class="mut" style="margin-bottom:12px;font-size:13.5px">Salle bondée : choisis un ou deux exercices et enchaîne les séries dessus.</p>
+        <div class="picks">${list.map(e => `<label class="pickrow"><input type="checkbox" data-sp="${e.id}"><span>${esc(e.n.replace(/^[A-Z]\d\s*·\s*/, ''))}</span></label>`).join('')}</div>
+        <div class="g2" style="margin-top:12px"><label class="f"><span>Autre exercice</span><input class="fi" id="spx" placeholder="ex. Tractions"></label>
+        <label class="f"><span>Séries par exercice</span><input class="fi" id="spn" inputmode="numeric" value="6"></label></div>
+        <button class="btn pri xl" data-act="spamGo">Commencer</button>`);
+    },
+    async spamGo() {
+      const n = Math.min(15, Math.max(1, parseInt($('#spn').value) || 6)), picked = [];
+      document.querySelectorAll('[data-sp]:checked').forEach(c => { for (const p of S.programs) { const e = p.ex.find(x => x.id === c.dataset.sp); if (e) { picked.push(clone(e)); break; } } });
+      const other = $('#spx').value.trim();
+      if (other) picked.push({ id: 'x_' + norm(other).replace(/ /g, '_'), n: other, reps: 'max', rest: 120, start: '', note: '', kind: 'w' });
+      if (!picked.length) { toast('Choisis au moins un exercice'); return; }
+      closeSheet();
+      if (S.cur && !await ask('Une séance est déjà en cours. L\'abandonner ?', 'Abandonner')) return;
+      picked.forEach(e => { e.n = e.n.replace(/^[A-Z]\d\s*·\s*/, ''); e.sets = n; e.sec = 'Spam'; e.key = false; e.rest = e.rest || 120; });
+      const prog = { id: '__spam', spam: true, name: 'Spam', tag: picked.map(e => e.n).join(' + '), dur: 'libre', ex: picked };
+      S.cur = { prog: '__spam', spamProg: prog, start: Date.now(), sets: {} };
+      prog.ex.forEach(e => { S.cur.sets[e.id] = initSets(e); });
+      save(); T = null; go({ t: 'work' });
+    },
     tab(t) { setTab(t.dataset.t); },
     back() { back(); },
     openProg(t) { go({ t: 'prog', id: t.dataset.id }); },

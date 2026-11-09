@@ -1,5 +1,5 @@
-const V = 'fonte-v3'; // changer à chaque mise à jour pour déclencher le bandeau « Actualiser »
-const FILES = ['./', 'index.html', 'style.css', 'app.js', 'data.js', 'manifest.webmanifest',
+const V = 'fonte-v4'; // changer à chaque mise à jour pour déclencher le bandeau « Actualiser »
+const FILES = ['./', 'index.html', 'style.css', 'app.js', 'game.js', 'data.js', 'manifest.webmanifest',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/icon-180.png', 'icons/maskable-512.png'];
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(V).then(c => c.addAll(FILES.map(f => new Request(f, { cache: 'reload' })))));
