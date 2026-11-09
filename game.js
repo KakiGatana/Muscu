@@ -1,7 +1,7 @@
 /* Entraînement — l'aventure : niveaux, zones, monstres et rendu pixel art (canvas, aucune image) */
 (function () {
   'use strict';
-  const W = 192, H = 108, GY = 86, HX = 40;
+  const W = 144, H = 128, GY = 104, HX = 24;
 
   /* ---------- règles ---------- */
   // XP cumulée pour atteindre le niveau l (niveau 5 ≈ 5 séances, niveau 10 ≈ 1 mois, niveau 50 ≈ 1 an)
@@ -120,9 +120,9 @@
   function tri(cx, h, slope, col, snow) { for (let i = 0; i < h; i++) { const w = Math.round(i * slope); R(snow && i < h * .3 ? snow : col, cx - w, GY - h + i, w * 2 + 1, 1); } }
   const BG = [
     (sx, t) => { // campagne
-      sky(['#86bfe0', '#a5d3ea', '#cfe8e0']); R('#fff1b8', 150, 10, 10, 10); R('#fff8d8', 152, 12, 6, 6);
+      sky(['#86bfe0', '#a5d3ea', '#cfe8e0']); R('#fff1b8', W - 34, 12, 10, 10); R('#fff8d8', W - 32, 14, 6, 6);
       each(sx + t * 30, .1, 76, (x, k) => { const y = 10 + (hash(k) * 16 | 0); R('#fff', x, y, 22, 4); R('#fff', x + 5, y - 3, 11, 3); });
-      ridge(sx, .2, 60, 5, 31, '#7fae6a'); ridge(sx, .4, 68, 4, 19, '#5f9450');
+      ridge(sx, .2, GY - 28, 6, 31, '#7fae6a'); ridge(sx, .4, GY - 19, 4, 19, '#5f9450');
       each(sx, .7, 66, (x, k) => { if (k % 2) { R('#5a3d22', x + 4, GY - 12, 3, 12); R('#3f7a3a', x - 1, GY - 22, 13, 11); R('#56984c', x + 1, GY - 21, 6, 4); } else { R('#d9b44a', x, GY - 8, 12, 8); R('#e8c865', x + 2, GY - 10, 8, 2); R('#b8923a', x, GY - 3, 12, 1); } });
       R('#8a6a3f', 0, GY - 5, W, 1); each(sx, 1, 14, x => R('#8a6a3f', x, GY - 7, 1, 7), 1);
       ground(sx, '#5d8a3d', '#7fb04f', '#4c7532');
@@ -236,6 +236,7 @@
   function stop() { if (raf) cancelAnimationFrame(raf); raf = 0; st = null; }
   function start(canvas, level, cap) {
     stop();
+    canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
     const s = st = { canvas, ctx, cap, level, z: zoneIdx(level), tier: tierIdx(level), phase: 'walk', t: 0, time: 0, sx: 0, m: null, mx: 0, sparks: [], n: 0 };
     const still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;

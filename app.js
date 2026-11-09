@@ -160,7 +160,7 @@
         <button class="btn pri xl" data-act="resume">Reprendre</button>
         <button class="btn ghost sm dng" style="margin-top:10px" data-act="abandon">Abandonner cette séance</button></section>`;
     } else if (prog) {
-      hero = `<section class="hero"><div class="eyebrow">${DAYS[di]}${prog.opt ? ' · optionnelle' : ''}</div>
+      hero = `<section class="hero"><div class="eyebrow">Quête du jour · ${DAYS[di]}${prog.opt ? ' · optionnelle' : ''}</div>
         <h1>${esc(prog.name)}</h1><p class="sub">${esc(prog.tag)}</p>
         <div class="chips"><span class="chip">${esc(prog.dur)}</span><span class="chip">${prog.ex.filter(e => e.kind !== 'c').length} exercices</span>${doneToday ? '<span class="chip ok">Déjà faite</span>' : ''}</div>
         ${day.n ? `<p class="note">${esc(day.n)}</p>` : ''}
@@ -376,7 +376,7 @@
     const tiers = RPG.TIERS.map((t, i) => `<div class="rk"><div class="grow"><b>${L >= t.l ? esc(t.t) : '???'}</b><div class="mut" style="font-size:12.5px">${L >= t.l ? esc(t.g) : 'Se débloque au niveau ' + t.l}</div></div>${i === ti ? '<span class="tagc">Actuel</span>' : ''}</div>`).join('');
     const bd = badges().map(b => `<div class="rk"><div class="grow"><b class="${b[2] ? '' : 'mut'}">${b[0]}</b><div class="mut" style="font-size:12.5px">${b[1]}</div></div>${b[2] ? '<span class="chip ok">Obtenu</span>' : ''}</div>`).join('');
     return `<div class="sect-h first"><h2>Aventure</h2><span class="chip">${esc(RPG.ZONES[zi].n)}</span></div>
-      <div class="scene"><canvas id="adv" width="192" height="108"></canvas><div id="advcap" class="cap">${esc(S.name)} avance dans ${esc(RPG.ZONES[zi].n.toLowerCase())}.</div></div>
+      <div class="scene"><div class="hud"><b>NIV. ${L}</b><span>${esc(RPG.TIERS[ti].t)}</span><div class="xp"><i style="width:${Math.round((xp - xa) / (xb - xa) * 100)}%"></i></div></div><canvas id="adv" width="144" height="128"></canvas><div id="advcap" class="cap">${esc(S.name)} avance dans ${esc(RPG.ZONES[zi].n.toLowerCase())}.</div></div>
       <div class="card me"><canvas data-me class="px" width="30" height="36"></canvas><div class="grow"><div class="eyebrow">Niveau ${L}</div><h3>${esc(S.name)}, ${esc(RPG.TIERS[ti].t)}</h3>
         <div class="xp"><i style="width:${Math.round((xp - xa) / (xb - xa) * 100)}%"></i></div><p class="mut" style="font-size:12.5px">${xp - xa} / ${xb - xa} XP · niveau ${L + 1} dans ${xb - xp} XP</p></div></div>
       <div class="stats">
@@ -540,11 +540,11 @@
     const lvl1 = RPG.levelOf(totalXp()), newTier = RPG.tierIdx(lvl1) > RPG.tierIdx(lvl0), newZone = RPG.zoneIdx(lvl1) > RPG.zoneIdx(lvl0);
     S.cur = null; T = null; save();
     V.stack = []; V.tab = 'home'; render(); window.scrollTo(0, 0);
-    openSheet(`<div class="win"><div class="eyebrow">Séance enregistrée</div><h2 style="font-size:30px;margin:6px 0">${esc(log.name)}</h2>
+    openSheet(`<div class="win"><div class="eyebrow">Quête accomplie</div><h2 style="font-size:30px;margin:6px 0">${esc(log.name)}</h2>
       <div class="g"><div class="stat"><b>${dur}</b><span>minutes</span></div><div class="stat"><b>${allSets + warm}</b><span>séries</span></div><div class="stat"><b>${(vol / 1000).toFixed(1).replace('.', ',')}</b><span>tonnes</span></div></div>
       <div class="coach"><div class="eyebrow">Le coach</div><p>${esc(log.coach)}</p></div>
       <div class="xpgain"><b>+${gain.xp} XP</b><span>${gain.base} × ${fw(gain.mult)} · série de ${streak}</span></div>
-      ${lvl1 > lvl0 ? `<div class="lvlup">Niveau ${lvl1} atteint${newTier ? ' · nouveau titre : ' + esc(RPG.TIERS[RPG.tierIdx(lvl1)].t) : ''}${newZone ? ' · nouvelle zone : ' + esc(RPG.ZONES[RPG.zoneIdx(lvl1)].n) : ''}</div>` : ''}
+      ${lvl1 > lvl0 ? `<div class="lvlup">Niveau supérieur · niveau ${lvl1}${newTier ? ' · nouveau titre : ' + esc(RPG.TIERS[RPG.tierIdx(lvl1)].t) : ''}${newZone ? ' · nouvelle zone : ' + esc(RPG.ZONES[RPG.zoneIdx(lvl1)].n) : ''}</div>` : ''}
       ${doRecords.map(r => `<div class="rec"><span>${esc(r.n)}</span><span>${fw(r.was)} → <b>${fw(r.w)} kg</b></span></div>`).join('')}
       <div class="g2" style="margin-top:12px"><button class="btn" data-act="toAdv">Voir l'aventure</button><button class="btn pri" data-act="sheetX">Fermer</button></div></div>`);
   }
