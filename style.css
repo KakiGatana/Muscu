@@ -332,3 +332,8 @@ details.hist li{padding:6px 0;border-top:1px solid var(--line);margin:0}
 .fxt.par{color:#9ad6ff;text-shadow:0 0 10px #4da3ff}.fxt.dod{color:#d6ccff;text-shadow:0 0 10px #8b6cff}
 @keyframes fxt{0%{opacity:0;transform:translateY(8px)}20%{opacity:1}100%{opacity:0;transform:translateY(-26px)}}
 .fxb.ko{border-color:#ff5d73;box-shadow:0 0 30px rgba(255,93,115,.6)}.fxb.ko small{color:#ff9aa8}.fxb.ko b{font-size:17px;text-shadow:0 0 14px #ff5d73}
+
+.g2.alt{margin:-4px 0 14px}
+.alt .btn.spam{margin:0;flex-direction:column;gap:2px;padding:10px 8px;font-size:13.5px;line-height:1.2}
+.alt .btn small{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);font-weight:600}
+.pickrow small{font-weight:400;font-size:12.5px}

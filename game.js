@@ -425,36 +425,148 @@
   }
   /* ---------- PNJ : un par zone, ils parlent de leur monde ou de tes vraies performances ---------- */
   const NPCS = [
-    ['Vieux fermier', hu('#d9b44a', '#d9a57c', '#2a1c12', '#7a6a4a', undefined, '#4a3a2a'), ['Avant, les rats restaient dans les granges. Depuis que les portails se sont ouverts, ils attaquent en plein jour.', 'Le Loup alpha rôde près de la clôture. Personne ne passe en ville sans l\'avoir battu.', 'Une fourche, ça suffit pour commencer. Tout le monde commence quelque part.']],
-    ['Marchande', hu('#7a3b22', '#e8b98a', '#2a1c12', '#3f7a6a', undefined, '#2c3a36'), ['La nuit, les bandits tiennent les ruelles. Leur chef ne sort que pour ceux qui valent le déplacement.', 'On dit que sous nos pieds, dans les égouts, quelque chose grossit.']],
-    ['Égoutier', hu('#4a4a3a', '#c9a57c', '#2a1c12', '#5a5a3a', undefined, '#33331f'), ['Ne touche pas l\'eau. Les slimes naissent dedans, et leur roi a tout avalé jusqu\'aux grilles.', 'Ces tunnels mènent jusqu\'à la forêt. Peu de gens en ressortent pour le raconter.']],
-    ['Herboriste', hu('#3a5a2a', '#e8b98a', '#2a1c12', '#5a7a3a', undefined, '#2a3a1f'), ['La forêt était claire, autrefois. C\'est le Troll qui a éteint les lucioles.', 'Les araignées tissent là où la lumière ne passe plus. Regarde où tu marches.']],
-    ['Vieux mineur', hu('#8a8f96', '#c98f66', '#2a1c12', '#6b4a2b', undefined, '#3a2c22'), ['On a creusé trop profond. Le Golem dormait dans la veine de cristal bleu.', 'Les kobolds volent les lanternes. Sans lumière, la mine te garde.']],
-    ['Guide de montagne', hu('#e6eef5', '#d9a57c', '#2a1c12', '#6c7d96', undefined, '#3a4660'), ['Là-haut, l\'air manque et le Yéti n\'aime pas la visite.', 'De la crête, par temps clair, on voit rougeoyer le volcan. C\'est par là que tu vas, non ?']],
-    ['Forgeron', hu('#2a1210', '#b9683a', '#ffb04a', '#5a2a1a', undefined, '#2a1210'), ['Ici, on forge dans la lave. Une lame trempée au volcan ne casse pas, son porteur parfois.', 'Le Démon est venu par la cheminée du cratère. Depuis, les braises ne retombent plus.']],
-    ['Vieux garde', hu('#9aa0a6', '#c9a57c', '#2a1c12', '#3a3a4a', undefined, '#22222e'), ['J\'ai servi le roi de cette citadelle. Maintenant, c\'est un dragon qui dort sur le trône.', 'Les chevaliers noirs étaient mes frères d\'armes. Ne leur montre aucune pitié, ils n\'en ont plus.']],
-    ['Éclaireuse', hu('#1a1030', '#c9b0d0', '#b388ff', '#2a1a55', undefined, '#120a22'), ['Ici, ton ombre ne t\'obéit plus tout à fait. Garde-la à l\'œil.', 'Le Gardien du portail ne dort jamais. Derrière lui, le ciel lui-même est une ville.']],
-    ['Prêtresse', hu('#fff6d8', '#f0d0b0', '#4da3ff', '#e9e6f4', undefined, '#c8963a'), ['Cette cité flottait au-dessus de tout. Puis l\'Archange est tombé, et elle penche depuis.', 'Les lions célestes gardaient les portes. Ils ne reconnaissent plus personne.']],
-    ['Plongeur perdu', hu('#12406a', '#9ad6ff', '#6fe3ff', '#0a2a4a', undefined, '#06203a'), ['Je suis descendu chercher une épave. Je cherche maintenant la surface.', 'Le Kraken ne chasse pas. Il attend que tu passes au-dessus.']],
-    ['Cartographe', hu('#3a0850', '#e8b98a', '#6fe3ff', '#22043a', undefined, '#12021f'), ['Mes cartes changent pendant que je les dessine. La faille n\'a pas de forme fixe.', 'Tu croiseras ton double, ici. Il connaît tes mouvements. Change-les.']],
-    ['Astronome errant', hu('#0d0a2a', '#d0d0f0', '#9ad6ff', '#1a1040', undefined, '#06051a'), ['Chaque étoile que tu vois est une chose que le Dévoreur n\'a pas encore mangée.', 'Au bout du vide, il y a un trône. Personne ne sait qui l\'a construit.']],
-    ['Dernier pèlerin', hu('#ffffff', '#f4e6ff', '#ff7ad9', '#b9a5e6', undefined, '#8a7ac0'), ['Tu es arrivé là où les histoires s\'arrêtent. Le Souverain attend le seul qui ira jusqu\'au niveau 100.', 'J\'ai mis une vie à monter ces marches. Toi, tu les montes une séance après l\'autre.']]
+    ['Vieux fermier', hu('#d9b44a', '#d9a57c', '#2a1c12', '#7a6a4a', undefined, '#4a3a2a'), [
+      'Avant, les rats restaient dans les granges. Depuis que les portails se sont ouverts, ils attaquent en plein jour.',
+      'Le Loup alpha rôde près de la clôture. Personne ne passe en ville sans l\'avoir battu.',
+      'Une fourche, ça suffit pour commencer. Tout le monde commence quelque part.',
+      'Les corbeaux suivent ceux qui vont tomber. S\'ils te tournent autour, entraîne-toi davantage.',
+      'Mon grand-père disait qu\'un chasseur est parti d\'ici avec une fourche et n\'est jamais revenu. Il serait monté jusqu\'aux étoiles.',
+      'Le sanglier a retourné tout mon champ. Rends-moi service, veux-tu ?',
+      'En ville, ils paient pour qu\'on garde les routes. Mais il faut d\'abord arriver jusqu\'à la ville.']],
+    ['Marchande', hu('#7a3b22', '#e8b98a', '#2a1c12', '#3f7a6a', undefined, '#2c3a36'), [
+      'La nuit, les bandits tiennent les ruelles. Leur chef ne sort que pour ceux qui valent le déplacement.',
+      'On dit que sous nos pieds, dans les égouts, quelque chose grossit.',
+      'Je vendais des lames, avant. Maintenant tout le monde veut des verrous.',
+      'Les mercenaires se battent pour qui paie. Toi, tu te bats pour quoi ?',
+      'La milice recrute ceux qui reviennent vivants de la campagne. Tu as le profil.',
+      'Un conseil gratuit : dans cette ville, ne tourne jamais le dos à quelqu\'un qui porte une capuche.',
+      'Les lanternes s\'éteignent une rue après l\'autre. Personne ne les rallume.']],
+    ['Égoutier', hu('#4a4a3a', '#c9a57c', '#2a1c12', '#5a5a3a', undefined, '#33331f'), [
+      'Ne touche pas l\'eau. Les slimes naissent dedans, et leur roi a tout avalé jusqu\'aux grilles.',
+      'Ces tunnels mènent jusqu\'à la forêt. Peu de gens en ressortent pour le raconter.',
+      'Vingt ans que je cure ces conduits. Les rats n\'ont jamais été aussi gros.',
+      'Le crocodile ? Quelqu\'un l\'a jeté ici tout petit. Il a bien profité.',
+      'Si tu entends battre des ailes, baisse la tête et continue d\'avancer.',
+      'L\'odeur, on s\'y fait. Le bruit dans le noir, jamais.',
+      'Le Roi slime porte une couronne. Je préfère ne pas savoir à qui elle était.']],
+    ['Herboriste', hu('#3a5a2a', '#e8b98a', '#2a1c12', '#5a7a3a', undefined, '#2a3a1f'), [
+      'La forêt était claire, autrefois. C\'est le Troll qui a éteint les lucioles.',
+      'Les araignées tissent là où la lumière ne passe plus. Regarde où tu marches.',
+      'Les champignons rouges soignent. Les autres, ne les goûte pas pour vérifier.',
+      'L\'Esprit des bois n\'est pas mauvais. Il est en colère, ce n\'est pas pareil.',
+      'Les gobelins ont peur du feu et des gens qui ne reculent pas.',
+      'Les loups noirs ne hurlent pas. Quand tu les entends, c\'est qu\'ils sont déjà là.',
+      'Plus loin, la terre est creusée de partout. Les mineurs ont réveillé quelque chose.']],
+    ['Vieux mineur', hu('#8a8f96', '#c98f66', '#2a1c12', '#6b4a2b', undefined, '#3a2c22'), [
+      'On a creusé trop profond. Le Golem dormait dans la veine de cristal bleu.',
+      'Les kobolds volent les lanternes. Sans lumière, la mine te garde.',
+      'Les squelettes, c\'est mon ancienne équipe. Ils continuent de pointer tous les matins.',
+      'Le cristal bleu donne de la force à qui le porte. Il en prend aussi un peu.',
+      'Quand le sol tremble, ce n\'est pas un éboulement. C\'est le ver qui change de galerie.',
+      'J\'ai porté des charges toute ma vie. Le secret, c\'est d\'y retourner le lendemain.',
+      'La sortie du haut donne sur les cimes. Couvre-toi.']],
+    ['Guide de montagne', hu('#e6eef5', '#d9a57c', '#2a1c12', '#6c7d96', undefined, '#3a4660'), [
+      'Là-haut, l\'air manque et le Yéti n\'aime pas la visite.',
+      'De la crête, par temps clair, on voit rougeoyer le volcan. C\'est par là que tu vas, non ?',
+      'Les orcs tiennent le col. Ils respectent la force et rien d\'autre.',
+      'Les harpies visent toujours celui qui marche en dernier. Ne traîne pas.',
+      'La montagne ne récompense pas les pressés. Un pas, puis un autre.',
+      'J\'ai vu des champions redescendre en pleurant. L\'armure dorée ne tient pas chaud.',
+      'Les loups des neiges chassent en silence. Regarde tes traces : si elles sont doublées, cours.']],
+    ['Forgeron', hu('#2a1210', '#b9683a', '#ffb04a', '#5a2a1a', undefined, '#2a1210'), [
+      'Ici, on forge dans la lave. Une lame trempée au volcan ne casse pas, son porteur parfois.',
+      'Le Démon est venu par la cheminée du cratère. Depuis, les braises ne retombent plus.',
+      'Le métal ne devient pas solide en une fois. On chauffe, on frappe, on recommence. Toi, c\'est pareil.',
+      'Les diablotins me volent mes outils. Si tu en croises un avec un marteau, il est à moi.',
+      'Les assassins de l\'ombre viennent s\'équiper ici. Ils paient bien et ne disent jamais merci.',
+      'La salamandre dort dans ma forge quand je m\'absente. On a fini par s\'entendre.',
+      'Au-delà de la coulée, il y a une citadelle. Son roi ne m\'a jamais payé sa dernière commande.']],
+    ['Vieux garde', hu('#9aa0a6', '#c9a57c', '#2a1c12', '#3a3a4a', undefined, '#22222e'), [
+      'J\'ai servi le roi de cette citadelle. Maintenant, c\'est un dragon qui dort sur le trône.',
+      'Les chevaliers noirs étaient mes frères d\'armes. Ne leur montre aucune pitié, ils n\'en ont plus.',
+      'La Liche était notre médecin. Elle a voulu sauver tout le monde, pour toujours.',
+      'Les gargouilles ne bougent que quand on ne les regarde pas. Alors regarde-les.',
+      'Je monte la garde devant une porte que plus personne ne franchit. L\'habitude.',
+      'Sous la salle du trône, il y a un escalier qui descend plus bas que les fondations. On l\'a muré. Ça n\'a pas suffi.',
+      'Un chasseur d\'élite, ici ? La dernière fois que j\'en ai vu un, la citadelle tenait encore debout.']],
+    ['Éclaireuse', hu('#1a1030', '#c9b0d0', '#b388ff', '#2a1a55', undefined, '#120a22'), [
+      'Ici, ton ombre ne t\'obéit plus tout à fait. Garde-la à l\'œil.',
+      'Le Gardien du portail ne dort jamais. Derrière lui, le ciel lui-même est une ville.',
+      'Les soldats d\'ombre sont ceux qui ont abandonné en route. Ne t\'arrête pas.',
+      'L\'assassin sans visage a pris celui de mon équipier. Si tu me croises deux fois, méfie-toi de la seconde.',
+      'Les torches brûlent en violet ici. On s\'y habitue plus vite qu\'au silence.',
+      'Ce donjon n\'a pas été construit. Il a poussé.',
+      'On raconte qu\'un seigneur des ombres commande aux morts qu\'il a vaincus. J\'aimerais autant que ce soit toi.']],
+    ['Prêtresse', hu('#fff6d8', '#f0d0b0', '#4da3ff', '#e9e6f4', undefined, '#c8963a'), [
+      'Cette cité flottait au-dessus de tout. Puis l\'Archange est tombé, et elle penche depuis.',
+      'Les lions célestes gardaient les portes. Ils ne reconnaissent plus personne.',
+      'Les séraphins chantaient. Écoute bien : ils ne font plus que répéter la même note.',
+      'On ne monte pas ici par hasard. Combien de fois as-tu failli renoncer ?',
+      'Les golems d\'or ont été faits pour servir. Sans maître, ils gardent des salles vides.',
+      'Sous les nuages, il y a une mer que personne n\'a sondée. Certains y sont tombés.',
+      'La lumière ne protège pas. Elle montre seulement ce qui vient.']],
+    ['Plongeur perdu', hu('#12406a', '#9ad6ff', '#6fe3ff', '#0a2a4a', undefined, '#06203a'), [
+      'Je suis descendu chercher une épave. Je cherche maintenant la surface.',
+      'Le Kraken ne chasse pas. Il attend que tu passes au-dessus.',
+      'Ici, la pression écrase tout ce qui n\'est pas solide. Tu tiens bien, toi.',
+      'Les méduses éclairent le chemin. Ne les remercie pas de trop près.',
+      'L\'Œil des profondeurs ne cligne presque jamais. Frappe quand il le fait.',
+      'J\'ai compté les jours au début. Puis j\'ai compté les marées. Maintenant je ne compte plus.',
+      'Tout au fond, il y a une fissure d\'où sort une lumière rose. Les poissons n\'y vont pas.']],
+    ['Cartographe', hu('#3a0850', '#e8b98a', '#6fe3ff', '#22043a', undefined, '#12021f'), [
+      'Mes cartes changent pendant que je les dessine. La faille n\'a pas de forme fixe.',
+      'Tu croiseras ton double, ici. Il connaît tes mouvements. Change-les.',
+      'Les anomalies ne sont pas vivantes. Elles imitent ce qui l\'est.',
+      'J\'ai vu un endroit où ce chemin n\'existe pas. J\'y étais mort. Ici, ça va.',
+      'Le Gardien de la faille ne protège pas la faille. Il protège ce qu\'il y a derrière, de nous.',
+      'Le sol est une grille parce que quelqu\'un l\'a dessiné ainsi. Je cherche encore qui.',
+      'Les traqueurs suivent les habitudes. Celui qui s\'entraîne toujours pareil est facile à trouver.']],
+    ['Astronome errant', hu('#0d0a2a', '#d0d0f0', '#9ad6ff', '#1a1040', undefined, '#06051a'), [
+      'Chaque étoile que tu vois est une chose que le Dévoreur n\'a pas encore mangée.',
+      'Au bout du vide, il y a un trône. Personne ne sait qui l\'a construit.',
+      'Le Titan du vide était une montagne. Elle s\'est levée.',
+      'Ici, il n\'y a ni haut ni bas. Seulement devant.',
+      'Le Serpent cosmique fait le tour de tout. Tu ne le combats jamais en entier.',
+      'J\'ai donné un nom à chaque étoile. L\'Entité n\'en a pas voulu.',
+      'Tu as marché depuis un champ de blé jusqu\'ici. Les étoiles ont vu moins têtu.']],
+    ['Dernier pèlerin', hu('#ffffff', '#f4e6ff', '#ff7ad9', '#b9a5e6', undefined, '#8a7ac0'), [
+      'Tu es arrivé là où les histoires s\'arrêtent. Le Souverain attend le seul qui ira jusqu\'au niveau 100.',
+      'J\'ai mis une vie à monter ces marches. Toi, tu les montes une séance après l\'autre.',
+      'Le Souverain était un chasseur, autrefois. Il est arrivé le premier, et il s\'est assis.',
+      'Les hérauts annoncent ta venue depuis longtemps. Ils ne pensaient pas que tu viendrais vraiment.',
+      'Le Dragon astral est né d\'une étoile qui refusait de s\'éteindre.',
+      'Après le trône, il n\'y a plus de monstres. Seulement toi, et ce que tu as construit.',
+      'Les marches sont en or, mais elles s\'usent quand même. Regarde où les autres se sont arrêtés.']]
   ];
   function perfLine(s) {
     const t = s.stats, out = [];
     if (!t || !t.n) return 'Tu n\'as encore rien prouvé. Va soulever quelque chose, on en reparle.';
-    if (t.streak >= 3) out.push(t.streak + ' jours d\'entraînement d\'affilée ? On commence à parler de toi par ici.');
-    if (t.days >= 3) out.push('Ça fait ' + t.days + ' jours qu\'on ne t\'a pas vu t\'entraîner. Les monstres, eux, ne prennent pas de repos.');
-    if (t.full) out.push('Ta dernière séance était complète. Ça se voit à ta façon de tenir ton arme.');
-    else if (t.spam) out.push('Il paraît que tu as martelé le même mouvement toute une séance. Têtu. J\'aime ça.');
-    else out.push('Tu as écourté ta dernière séance, non ? Le prochain boss ne te fera pas ce cadeau.');
-    if (t.rec) out.push('Un record à ta dernière séance, à ce qu\'on raconte. Continue comme ça.');
+    if (t.streak >= 5) out.push(t.streak + ' jours d\'affilée. À ce rythme, les monstres vont finir par changer de trottoir.');
+    if (t.streak >= 3) out.push(t.streak + ' jours d\'entraînement d\'affilée ? On commence à parler de toi par ici.', 'Série de ' + t.streak + '. Ne la casse pas : c\'est elle qui multiplie ton expérience.');
+    if (t.streak === 2) out.push('Deux jours de suite. Un troisième, et ça devient une habitude.');
+    if (t.days >= 7) out.push('Plus d\'une semaine sans entraînement. Ton arme prend la poussière, et ça se voit.');
+    if (t.days >= 3) out.push('Ça fait ' + t.days + ' jours qu\'on ne t\'a pas vu t\'entraîner. Les monstres, eux, ne prennent pas de repos.', t.days + ' jours sans séance. Reviens avant que la série ne soit qu\'un souvenir.');
+    if (t.days === 0) out.push('Tu t\'es entraîné aujourd\'hui, ça se sent. Tu frappes plus net.');
+    if (t.full) out.push('Ta dernière séance était complète. Ça se voit à ta façon de tenir ton arme.', 'Pas un exercice sauté la dernière fois. C\'est comme ça qu\'on passe les boss.');
+    else if (t.spam) out.push('Il paraît que tu as martelé le même mouvement toute une séance. Têtu. J\'aime ça.', 'Salle pleine, et tu t\'es entraîné quand même. Beaucoup auraient fait demi-tour.');
+    else if (t.pdc) out.push('Pas de salle, pas d\'excuse : tu t\'es entraîné au poids du corps. Respect.', 'Ton propre poids comme seule charge. Les anciens chasseurs ne faisaient pas autrement.');
+    else out.push('Tu as écourté ta dernière séance, non ? Le prochain boss ne te fera pas ce cadeau.', 'Séance incomplète la dernière fois. Ça arrive. Deux fois de suite, c\'est un choix.');
+    if (t.sets >= 20) out.push(t.sets + ' séries à ta dernière séance. Tu ne fais pas semblant.');
+    if (t.rec) out.push('Un record à ta dernière séance, à ce qu\'on raconte. Continue comme ça.', 'Tu soulèves plus lourd qu\'avant. Ici, ça se remarque.');
     if (t.planned) out.push(t.did >= t.planned ? 'Toutes tes séances de la semaine sont faites. Rien à redire.' : t.did + ' séance' + (t.did > 1 ? 's' : '') + ' sur ' + t.planned + ' cette semaine. Il reste du chemin.');
+    if (t.n >= 10) out.push(t.n + ' séances au compteur. Tu n\'es plus un débutant, arrête de te comporter comme tel.');
     let nb = null; ZONES.forEach(z => z.m.forEach(m => { if (m.boss && m.l > s.level && !nb) nb = m; }));
     if (nb) out.push(nb.n + ' t\'attend au niveau ' + nb.l + '. Encore ' + (nb.l - s.level) + ' niveau' + (nb.l - s.level > 1 ? 'x' : '') + ' à gagner.');
+    const nt = TIERS.find(x => x.l > s.level);
+    if (nt) out.push('Encore ' + (nt.l - s.level) + ' niveau' + (nt.l - s.level > 1 ? 'x' : '') + ' et tu changes de tenue. Celle-ci commence à dater.');
     return out[Math.floor(Math.random() * out.length)];
   }
-  function npcLine(s) { const lore = NPCS[s.z][2]; return ++s.talk % 2 ? lore[Math.floor(Math.random() * lore.length)] : perfLine(s); }
+  function npcLine(s) {
+    const lore = NPCS[s.z][2]; let l, n = 0;
+    do { l = ++s.talk % 2 ? lore[Math.floor(Math.random() * lore.length)] : perfLine(s); } while ((s.said.indexOf(l) >= 0) && n++ < 8);
+    s.said.push(l); if (s.said.length > 6) s.said.shift();
+    return l;
+  }
   function bubble(s, name, text) {
     if (!s.box || !s.box.isConnected) return;
     const old = s.box.querySelector('.bubble'); if (old) old.remove();
@@ -864,7 +976,7 @@
     const still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (still && target > level) { level = target; if (o.onSeen) o.onSeen(target); }   // sans animations : on acte directement
     const s = st = { canvas, ctx, real, K, box: canvas.parentNode, cap: o.cap, name: o.name || 'Le héros', onSeen: o.onSeen, onDone: o.onDone, level, z: zoneIdx(level), tier: tierIdx(level),
-      queue: buildQueue(level, target), ev: null, phase: 'walk', t: 0, time: 0, sx: 0, m: null, mx: 0, sparks: [], fx: [], hdodge: -9, hparry: -9, npc: null, enc: 0, talk: 0, stats: o.stats || null, parts: [], pt0: 0, n: 0, shake: 0, mflash: 0, hhit: -9, charge: 0, hits: 0, doneAt: 0 };
+      queue: buildQueue(level, target), ev: null, phase: 'walk', t: 0, time: 0, sx: 0, m: null, mx: 0, sparks: [], fx: [], hdodge: -9, hparry: -9, npc: null, enc: 0, talk: 0, said: [], stats: o.stats || null, parts: [], pt0: 0, n: 0, shake: 0, mflash: 0, hhit: -9, charge: 0, hits: 0, doneAt: 0 };
     let last = performance.now();
     const loop = now => {
       if (st !== s || !canvas.isConnected) { if (st === s) stop(); return; }

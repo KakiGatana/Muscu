@@ -176,7 +176,7 @@
     const nudge = (S.logs.length >= 3 && Date.now() - (S.lastBackup || 0) > 14 * 864e5)
       ? `<div class="card nudge"><div><b>Sauvegarde conseillée</b><p class="mut">${S.lastBackup ? 'Dernière il y a ' + Math.round((Date.now() - S.lastBackup) / 864e5) + ' jours.' : 'Aucune sauvegarde pour l\'instant.'}</p></div><button class="btn sm" data-act="export">Exporter</button></div>` : '';
     const xp = totalXp(), Lr = RPG.levelOf(xp), L = seenLvl(Lr), pending = Lr > L, xa = RPG.need(L), xb = RPG.need(L + 1), stk = streakNow();
-    const spamBtn = hasCur ? '' : `<button class="btn xl ghost spam" data-act="spam">Salle bondée ? Séance spam</button>`;
+    const spamBtn = hasCur ? '' : `<div class="g2 alt"><button class="btn ghost spam" data-act="spam"><small>Salle bondée</small>Séance spam</button><button class="btn ghost spam" data-act="pdc"><small>Pas de salle</small>Poids du corps</button></div>`;
     const adv = `<button class="card advstrip" data-act="tab" data-t="adv"><canvas data-me class="px" width="40" height="48"></canvas>
       <div class="grow"><div class="eyebrow">Niveau ${L} · ${RPG.TIERS[RPG.tierIdx(L)].t}</div><div class="xp"><i style="width:${Math.min(100, L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div>
       <p class="mut">${pending ? '<b class="pend">Niveau supérieur ! Ouvre l\'aventure</b>' : L >= RPG.MAX ? 'Niveau maximum' : (xp - xa) + ' / ' + (xb - xa) + ' XP'}${stk > 1 ? ' · série de ' + stk : ''}</p></div>${svg('go', 'go')}</button>`;
@@ -367,7 +367,7 @@
     const c = $('#adv'); if (!c) { RPG.stop(); return; }
     const now = new Date(), mon = new Date(now), last = S.logs[S.logs.length - 1]; mon.setDate(now.getDate() - (now.getDay() + 6) % 7); let did = 0;
     for (let i = 0; i < 7; i++) { const d = new Date(mon); d.setDate(mon.getDate() + i); if (S.logs.some(l => logDay(l) === isoDay(d))) did++; }
-    const stats = { n: S.logs.length, streak: streakNow(), did, planned: S.week.filter(d => d.p).length, full: !!(last && last.full), spam: !!(last && last.spam), rec: (last && last.rec) || 0, days: last ? Math.floor((Date.now() - Date.parse(last.date)) / 864e5) : 0 };
+    const stats = { n: S.logs.length, streak: streakNow(), did, planned: S.week.filter(d => d.p).length, full: !!(last && last.full), spam: !!(last && last.spam), pdc: !!(last && last.pdc), sets: last ? last.ex.reduce((n, e) => n + e.sets.length, 0) : 0, rec: (last && last.rec) || 0, days: last ? Math.floor((Date.now() - Date.parse(last.date)) / 864e5) : 0 };
     RPG.start(c, { level: L, target: Lr, cap: $('#advcap'), name: S.name, real: S.opts.gfx === 'real', stats,
       onSeen: l => { S.adv = { seen: l }; save(); },
       onDone: () => { if (V.tab === 'adv' && !top()) render(); } });
@@ -396,7 +396,7 @@
         <li><b>3 XP</b> par série validée, <b>2 XP</b> par échauffement, <b>+15</b> si la séance est faite en entier, <b>+5</b> par record.</li>
         <li>Le total est multiplié par ta série : ×1 le premier jour, puis +0,25 par jour d'entraînement d'affilée, jusqu'à ×2,5.</li>
         <li>Un jour de repos prévu au planning ne casse pas la série. Un jour de séance prévu et sauté la remet à zéro.</li>
-        <li>Une séance spam compte comme les autres : ce sont les séries validées qui paient.</li>
+        <li>Les séances spam et poids du corps comptent comme les autres, pour l'XP comme pour la série de jours : ce sont les séries validées qui paient, et le bonus de séance complète s'applique au poids du corps.</li>
         <li>Niveau maximum : <b>100</b>. À rythme régulier (environ 4 séances par semaine), compte à peu près un an pour le niveau 50 et quatre ans pour le niveau 100.</li></ul></details>
       <div class="sect-h"><h2>Le voyage</h2></div>${zones}
       <div class="sect-h"><h2>Équipement</h2></div>${tiers}
@@ -507,6 +507,12 @@
       : pick([`Salle pleine, et tu as quand même sorti ${o.sets} séries sur ${o.names}. Bon réflexe : du volume sur un gros mouvement vaut mieux qu'une séance annulée.`,
         `${o.sets} séries sur ${o.names}. Simple et efficace. Surveille la qualité des dernières : quand la technique part, tu arrêtes.`,
         `Tu as transformé une salle bondée en vraie séance : ${o.sets} séries sur ${o.names}. La prochaine fois, change de mouvement pour ne pas toujours taper les mêmes articulations.`]);
+    else if (o.pdc) s = o.full
+      ? pick([`Pas de salle, et tu as quand même tout fait : ${o.sets} séries au poids du corps. C'est exactement ce qui sépare ceux qui progressent des autres.`,
+        `Circuit complet à la maison, ${o.sets} séries. Rien à redire. La série de jours continue.`])
+      : o.sets < 8 ? `${o.sets} séries au poids du corps. C'est mieux que zéro et ta série de jours est sauvée, mais sans charge il faut du volume : vise 12 séries et plus.`
+      : pick([`${o.sets} séries au poids du corps sur ${o.doneEx} exercice${o.doneEx > 1 ? 's' : ''}. Bon travail sans matériel. Ralentis la descente pour compenser l'absence de charge.`,
+        `Pas de salle, mais ${o.sets} séries quand même. Au poids du corps, c'est le tempo et la proximité de l'échec qui font le travail.`]);
     else if (o.full) s = pick(['Séance complète, du premier au dernier exercice. Rien à redire. Mange tes protéines et dors.',
       'Tout est coché. C\'est avec des séances comme celle-là, répétées, que le physique change.',
       'Carton plein. Si les dernières séries étaient faciles, on monte la charge la prochaine fois.']);
@@ -541,11 +547,11 @@
     const dur = Math.max(1, Math.round((Date.now() - S.cur.start) / 60000));
     const vol = ex.reduce((a, e) => a + e.sets.reduce((b, s) => b + (num(s.w) || 0) * (num(s.r) || 0), 0), 0);
     const lvl0 = RPG.levelOf(totalXp());
-    const log = { id: uid(), date: new Date().toISOString(), prog: pr.id, name: spam ? 'Spam · ' + pr.tag : pr.name, dur, ex, spam, full, rec: doRecords.length };
+    const log = { id: uid(), date: new Date().toISOString(), prog: pr.id, name: spam ? 'Spam · ' + pr.tag : pr.name, dur, ex, spam, pdc: !!pr.pdc, full, rec: doRecords.length };
     S.logs.push(log);
     const streak = streakNow(), gain = RPG.sessionXp({ sets: xpSets, warm, full, records: doRecords.length, streak });
     log.xp = gain.xp; log.streak = streak; log.mult = gain.mult;
-    log.coach = coachLine({ sets: allSets, spam, names: pr.tag, full, doneEx, totalEx: work.length, coreDone, coreTotal: core.length, records: doRecords.length, streak });
+    log.coach = coachLine({ sets: allSets, spam, pdc: !!pr.pdc, names: pr.tag, full, doneEx, totalEx: work.length, coreDone, coreTotal: core.length, records: doRecords.length, streak });
     const lvl1 = RPG.levelOf(totalXp()), newTier = RPG.tierIdx(lvl1) > RPG.tierIdx(lvl0), newZone = RPG.zoneIdx(lvl1) > RPG.zoneIdx(lvl0);
     S.cur = null; T = null; save();
     V.stack = []; V.tab = 'home'; render(); window.scrollTo(0, 0);
@@ -566,7 +572,46 @@
   }
 
   /* ---------- actions ---------- */
+  // exercices sans matériel (pas de dips : épaule gauche)
+  const PDC = [
+    ['pdc_pompes', 'Pompes', '10-20', 60, 'Descente contrôlée, corps gainé'],
+    ['pdc_pompes_sur', 'Pompes pieds surélevés', '8-15', 60, 'Cible le haut des pectoraux, ton point faible'],
+    ['pdc_tractions', 'Tractions', '3-8', 120, 'Si tu as une barre. Objectif : 10 strictes'],
+    ['pdc_row', 'Rowing inversé sous une table', '8-12', 90, 'Tirage sans barre : poitrine vers la table'],
+    ['pdc_pike', 'Pompes piquées (pike)', '6-10', 90, 'Épaules. Stop si l\'épaule gauche tire', 'epaule_gauche'],
+    ['pdc_squats', 'Squats', '20-25', 60, 'Descente 3 s, pas de rebond'],
+    ['pdc_bulgares', 'Squats bulgares', '10 par jambe', 75, 'Descente contrôlée', 'genou'],
+    ['pdc_fentes', 'Fentes arrière', '12 par jambe', 60, 'Plus douces pour le genou que les fentes avant'],
+    ['pdc_pont', 'Pont fessier une jambe', '12 par jambe', 45, 'Serre 1 s en haut'],
+    ['pdc_planche', 'Gainage planche', '45 s', 45, ''],
+    ['pdc_lateral', 'Gainage latéral', '30 s par côté', 45, ''],
+    ['pdc_releves', 'Relevés de jambes', '12-15', 45, 'Lombaires plaquées au sol'],
+    ['pdc_superman', 'Superman', '12', 30, 'Lombaires, version légère'],
+    ['pdc_climbers', 'Mountain climbers', '30 s', 45, ''],
+    ['pdc_burpees', 'Burpees', '10', 60, 'Sans saut si le genou proteste', 'genou']
+  ];
   const A = {
+    pdc() {
+      const def = ['pdc_pompes', 'pdc_row', 'pdc_squats', 'pdc_fentes', 'pdc_planche'];
+      openSheet(`<h2>Poids du corps</h2><p class="mut" style="margin-bottom:12px;font-size:13.5px">Pas de salle aujourd'hui : choisis tes exercices. Plus tu valides de séries, plus tu gagnes d'XP, et la série de jours continue.</p>
+        <div class="picks">${PDC.map(e => `<label class="pickrow"><input type="checkbox" data-pd="${e[0]}" ${def.indexOf(e[0]) >= 0 ? 'checked' : ''}><span>${esc(e[1])} <small class="mut">· ${esc(e[2])}</small></span></label>`).join('')}</div>
+        <div class="g2" style="margin-top:12px"><label class="f"><span>Autre exercice</span><input class="fi" id="pdx" placeholder="ex. Chaise"></label>
+        <label class="f"><span>Séries par exercice</span><input class="fi" id="pdn" inputmode="numeric" value="3"></label></div>
+        <button class="btn pri xl" data-act="pdcGo">Commencer</button>`);
+    },
+    async pdcGo() {
+      const n = Math.min(10, Math.max(1, parseInt($('#pdn').value) || 3)), ex = [];
+      document.querySelectorAll('[data-pd]:checked').forEach(c => { const e = PDC.find(x => x[0] === c.dataset.pd); if (e) { const d = { id: e[0], n: e[1], reps: e[2], rest: e[3], note: e[4], kind: 'b', sets: n, sec: 'Poids du corps', key: false, start: '' }; if (e[5]) d.alert = e[5]; ex.push(d); } });
+      const other = $('#pdx').value.trim();
+      if (other) ex.push({ id: 'pdc_x_' + norm(other).replace(/ /g, '_'), n: other, reps: 'max', rest: 60, note: '', kind: 'b', sets: n, sec: 'Poids du corps', key: false, start: '' });
+      if (!ex.length) { toast('Choisis au moins un exercice'); return; }
+      closeSheet();
+      if (S.cur && !await ask('Une séance est déjà en cours. L\'abandonner ?', 'Abandonner')) return;
+      const prog = { id: '__spam', pdc: true, name: 'Poids du corps', tag: ex.length + ' exercice' + (ex.length > 1 ? 's' : ''), dur: 'libre', ex };
+      S.cur = { prog: '__spam', spamProg: prog, start: Date.now(), sets: {} };
+      prog.ex.forEach(e => { S.cur.sets[e.id] = initSets(e); });
+      save(); T = null; go({ t: 'work' });
+    },
     toAdv() { closeSheet(); setTab('adv'); },
     gfx(t) { const real = S.opts.gfx !== 'real'; S.opts.gfx = real ? 'real' : 'pixel'; save(); RPG.setMode(real); t.textContent = 'Style : ' + (real ? 'Réaliste' : 'Pixel'); },
     advSkip() { S.adv = { seen: RPG.levelOf(totalXp()) }; save(); render(); },
