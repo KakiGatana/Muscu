@@ -321,3 +321,5 @@ details.hist li{padding:6px 0;border-top:1px solid var(--line);margin:0}
 .bossbar i{display:block;height:100%;background:linear-gradient(90deg,#ff5d73,#ffb07a);transition:width .25s}
 .scene .skip{position:absolute;right:10px;bottom:54px;z-index:4;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mut);padding:5px 10px;border:1px solid var(--line2);border-radius:4px;background:rgba(6,10,20,.75)}
 .pend{color:#c4b5ff;font-weight:700;text-shadow:0 0 10px rgba(139,108,255,.8)}
+
+.scene canvas.real{image-rendering:auto}

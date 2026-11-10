@@ -487,17 +487,140 @@
     }
     g.globalAlpha = 1;
   }
+  /* ---------- rendu « réaliste » : haute définition, silhouettes lisses, lumière, brume, météo ---------- */
+  const RK = 4;
+  const rgba = (h, a) => { let c = h.slice(1); if (c.length === 3) c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2]; const n = parseInt(c, 16); return `rgba(${n >> 16},${n >> 8 & 255},${n & 255},${a})`; };
+  // par zone : ciel [haut, bas], astre [x, y, rayon, couleur], 3 plans [forme, couleur, hauteur], sol [haut, bas], brume, météo [type, couleur]
+  const RZ = [
+    { sky: ['#4f7389', '#cfd9cc'], orb: [112, 26, 7, '#fff3c8'], L: [['hill', '#7f9c93', 30], ['hill', '#4f6f58', 18], ['tree', '#24382a', 20]], gr: ['#3f5a3a', '#1c2a1b'], fog: '#d8e4d6', wx: ['mote', '#fff8d0'] },
+    { sky: ['#12101f', '#a0523f'], orb: [30, 22, 6, '#f1e6d0'], L: [['city', '#33283c', 40], ['city', '#1a1522', 30], ['rock', '#0c0a10', 7]], gr: ['#2c2a36', '#0e0d13'], fog: '#b06a55', wx: ['rain', '#c8d8ff'] },
+    { sky: ['#070d0b', '#1c2e28'], L: [['pillar', '#16241f', 0], ['pillar', '#0b1411', 0], ['rock', '#060c0a', 6]], gr: ['#17352c', '#06100d'], fog: '#3f9a7a', wx: ['mote', '#7fe0b0'] },
+    { sky: ['#050d09', '#1c3a26'], orb: [100, 20, 5, '#d8f0d0'], L: [['tree', '#14291c', 62], ['tree', '#0a170f', 74], ['rock', '#050b07', 6]], gr: ['#16281a', '#070e09'], fog: '#5a9a70', wx: ['mote', '#d8ff8a'] },
+    { sky: ['#09080c', '#241c18'], L: [['rock', '#1c181c', 40], ['pillar', '#110e12', 0], ['spire', '#08070a', 9]], gr: ['#2a2522', '#0c0a0a'], fog: '#c8813a', wx: ['ember', '#ffb84a'] },
+    { sky: ['#56799f', '#e3ecf4'], orb: [108, 22, 6, '#ffffff'], L: [['peak', '#93a6bf', 58], ['peak', '#5f7190', 36], ['tree', '#22343a', 12]], gr: ['#e6eef5', '#9db1c6'], fog: '#ffffff', wx: ['snow', '#ffffff'] },
+    { sky: ['#0c0404', '#b8431a'], orb: [70, 96, 26, '#ff6a1a'], L: [['peak', '#3d1510', 62], ['spire', '#170807', 26], ['rock', '#0a0303', 8]], gr: ['#2a120e', '#090302'], fog: '#ff5a14', wx: ['ember', '#ff9a3a'] },
+    { sky: ['#05050f', '#2a2148'], orb: [28, 24, 7, '#e9e6ff'], star: 1, L: [['city', '#1c1c30', 50], ['pillar', '#0e0e1a', 0], ['rock', '#07070d', 6]], gr: ['#2c2c3c', '#0b0b12'], fog: '#7a70c0', wx: ['rain', '#b0b8ff'] },
+    { sky: ['#05030b', '#24124a'], orb: [86, 58, 16, '#8b6cff'], L: [['pillar', '#170d2e', 0], ['pillar', '#0a0616', 0], ['spire', '#05030b', 8]], gr: ['#171026', '#05030b'], fog: '#8b6cff', wx: ['mote', '#b388ff'] },
+    { sky: ['#2b5cc2', '#ffe2b8'], orb: [110, 26, 9, '#fff6d8'], L: [['city', '#b9c8ea', 56], ['city', '#e9e6f4', 34], ['rock', '#ffffff', 7]], gr: ['#f4f6ff', '#b4c2e6'], fog: '#fff0d2', wx: ['mote', '#ffffff'] },
+    { sky: ['#01050c', '#06243f'], L: [['spire', '#08203a', 66], ['spire', '#030b16', 40], ['rock', '#02070d', 7]], gr: ['#0a1a2c', '#02060c'], fog: '#3aa8c8', wx: ['bubble', '#9ad6ff'] },
+    { sky: ['#0b0116', '#5a0c5e'], orb: [40, 40, 10, '#6fe3ff'], L: [['spire', '#2c0644', 70], ['spire', '#0d0118', 34], ['rock', '#06000c', 6]], gr: ['#1a0330', '#06000c'], fog: '#ff4ad9', wx: ['mote', '#6fe3ff'] },
+    { sky: ['#010107', '#100c30'], orb: [104, 34, 14, '#5a4ab8'], star: 1, L: [['rock', '#16142e', 30], ['spire', '#08071c', 22], ['rock', '#030310', 6]], gr: ['#16162a', '#04040b'], fog: '#8b6cff', wx: ['mote', '#9ad6ff'] },
+    { sky: ['#0a0620', '#e08ac0'], orb: [72, 30, 12, '#fff6d8'], star: 1, L: [['city', '#8a5aa8', 64], ['pillar', '#3a1a6a', 0], ['rock', '#f4eaff', 6]], gr: ['#d9c8ff', '#7d6bbd'], fog: '#ffb4e6', wx: ['mote', '#ffffff'] }
+  ];
+  function layer(sx, par, type, col, hb, seed) {
+    g.fillStyle = col; g.beginPath();
+    if (type === 'hill') { g.moveTo(0, GY + 1); for (let x = 0; x <= W; x += 3) { const wx = x + sx * par + seed * 50; g.lineTo(x, GY - hb - Math.sin(wx / 37) * hb * .35 - Math.sin(wx / 13) * hb * .12); } g.lineTo(W, GY + 1); g.fill(); return; }
+    const step = { peak: 58, city: 34, tree: 30, pillar: 52, spire: 26, rock: 44 }[type];
+    each(sx + seed * 200, par, step, (x, k) => {
+      const r = hash(k + seed * 31), h = hb * (.6 + r * .8);
+      if (type === 'peak') { g.moveTo(x - h * .75, GY + 1); g.lineTo(x - h * .1, GY - h); g.lineTo(x + h * .06, GY - h * .92); g.lineTo(x + h * .8, GY + 1); g.closePath(); }
+      else if (type === 'city') { const w = 14 + r * 10; g.rect(x, GY - h, w, h + 1); g.moveTo(x - 4, GY - h + 1); g.quadraticCurveTo(x + w * .25, GY - h - 1, x + w / 2, GY - h - 7); g.quadraticCurveTo(x + w * .75, GY - h - 1, x + w + 4, GY - h + 1); g.closePath(); if (r > .5) { g.rect(x + w * .3, GY - h - 13, w * .4, 7); g.moveTo(x + w * .15, GY - h - 12); g.lineTo(x + w / 2, GY - h - 18); g.lineTo(x + w * .85, GY - h - 12); g.closePath(); } }
+      else if (type === 'tree') { g.rect(x + 3, GY - h, 2.5 + r * 2, h + 1); g.moveTo(x + 14 + r * 6, GY - h); g.ellipse(x + 4, GY - h, 10 + r * 6, 7 + r * 5, 0, 0, 7); }
+      else if (type === 'pillar') { g.rect(x, 0, 8, GY + 1); g.rect(x - 2, 0, 12, 4); g.rect(x - 2, GY - 4, 12, 5); }
+      else if (type === 'spire') { g.moveTo(x - 3 - r * 3, GY + 1); g.lineTo(x + r * 2, GY - h); g.lineTo(x + 4 + r * 3, GY + 1); g.closePath(); }
+      else { g.moveTo(x - 8, GY + 1); g.quadraticCurveTo(x - 6, GY - h * .6, x, GY - h * .55); g.quadraticCurveTo(x + 9, GY - h * .5, x + 11, GY + 1); g.closePath(); }
+    }, type === 'pillar');
+    g.fill();
+  }
+  function bgReal(z, sx, T) {
+    const Z = RZ[z];
+    let gr = g.createLinearGradient(0, 0, 0, GY); gr.addColorStop(0, Z.sky[0]); gr.addColorStop(1, Z.sky[1]); g.fillStyle = gr; g.fillRect(0, 0, W, GY + 1);
+    if (Z.star) for (let i = 0; i < 46; i++) { g.fillStyle = rgba('#ffffff', .35 + .5 * Math.abs(Math.sin(T * 1.5 + i * 1.7))); g.fillRect(hash(i) * W, hash(i + 60) * GY * .7, .7, .7); }
+    if (Z.orb) { const [ox, oy, r, c] = Z.orb; gr = g.createRadialGradient(ox, oy, r * .4, ox, oy, r * 4.5); gr.addColorStop(0, rgba(c, .55)); gr.addColorStop(1, rgba(c, 0)); g.fillStyle = gr; g.fillRect(0, 0, W, GY); g.fillStyle = c; g.beginPath(); g.arc(ox, oy, r, 0, 7); g.fill(); }
+    Z.L.forEach((l, i) => {
+      layer(sx, [.12, .4, .75][i], l[0], l[1], l[2], i + 1);
+      if (i < 2) { gr = g.createLinearGradient(0, GY - 46, 0, GY); gr.addColorStop(0, rgba(Z.fog, 0)); gr.addColorStop(1, rgba(Z.fog, i ? .3 : .42)); g.fillStyle = gr; g.fillRect(0, GY - 46, W, 47); }
+    });
+    gr = g.createLinearGradient(0, GY, 0, H); gr.addColorStop(0, Z.gr[0]); gr.addColorStop(1, Z.gr[1]); g.fillStyle = gr; g.fillRect(0, GY, W, H - GY);
+    g.fillStyle = rgba(Z.fog, .3); g.fillRect(0, GY, W, .6);
+    g.fillStyle = 'rgba(0,0,0,.22)'; each(sx, 1, 23, (x, k) => { g.beginPath(); g.ellipse(x, GY + 6 + hash(k) * 14, 5 + hash(k + 2) * 5, 1, 0, 0, 7); g.fill(); });
+  }
+  function postReal(z, T) {
+    const [k, c] = RZ[z].wx;
+    if (k === 'rain') { g.strokeStyle = rgba(c, .32); g.lineWidth = .45; g.beginPath(); for (let i = 0; i < 46; i++) { const px = ((hash(i) * W * 1.2 - T * 46) % W + W) % W, py = (hash(i + 7) * H + T * (230 + hash(i) * 90)) % H; g.moveTo(px, py); g.lineTo(px - 1.6, py + 6.5); } g.stroke(); }
+    else if (k === 'snow') { g.fillStyle = rgba(c, .85); for (let i = 0; i < 34; i++) { g.beginPath(); g.arc((hash(i) * W + Math.sin(T + i) * 6 + T * 7) % W, (hash(i + 3) * H + T * (14 + hash(i) * 14)) % H, .5 + hash(i + 5) * .7, 0, 7); g.fill(); } }
+    else if (k === 'bubble') { g.strokeStyle = rgba(c, .5); g.lineWidth = .35; for (let i = 0; i < 16; i++) { g.beginPath(); g.arc((hash(i) * W + Math.sin(T * 1.5 + i) * 4 + W) % W, H - ((T * (12 + hash(i) * 10) + hash(i + 4) * H) % H), .8 + hash(i + 8) * 1.2, 0, 7); g.stroke(); } }
+    else { const em = k === 'ember'; g.shadowColor = c; g.shadowBlur = 8; for (let i = 0; i < (em ? 22 : 16); i++) { g.fillStyle = rgba(c, .35 + .55 * Math.abs(Math.sin(T * 2 + i * 2.3))); g.beginPath(); g.arc((hash(i) * W + Math.sin(T * .8 + i) * 8 + W) % W, GY + 6 - ((T * (em ? 16 : 5) * (1 + hash(i + 9)) + hash(i + 4) * 100) % 104), em ? .7 : .55, 0, 7); g.fill(); } g.shadowBlur = 0; }
+    const v = g.createRadialGradient(W / 2, H * .52, H * .3, W / 2, H * .52, H * .86); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.66)'); g.fillStyle = v; g.fillRect(0, 0, W, H);
+  }
+  function heroReal(x, tier, walking, atk, ak, T) {
+    const P = HP[tier], w = P.w, fy = GY, sw = walking ? Math.sin(T * 10) : 0, bob = walking ? Math.abs(Math.sin(T * 10)) * .8 : Math.sin(T * 2) * .3;
+    const cx = x + 10, hipY = fy - 10 - bob, shY = fy - 19 - bob, hdY = fy - 22.6 - bob;
+    const line = (x1, y1, x2, y2) => { g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); };
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    g.fillStyle = 'rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(cx, fy + .6, 8, 1.6, 0, 0, 7); g.fill();
+    if (P.aura) { const c = P.aura === 'rb' ? RB[Math.floor(T * 3) % RB.length] : P.aura, gr = g.createRadialGradient(cx, fy - 14, 2, cx, fy - 14, 21); gr.addColorStop(0, rgba(c, .5)); gr.addColorStop(1, rgba(c, 0)); g.fillStyle = gr; g.fillRect(cx - 22, fy - 36, 44, 40); }
+    if (P.wings) { const fl = Math.sin(T * 4) * 2; g.fillStyle = rgba(P.wings, .88); [0, 4].forEach((o, i) => { g.beginPath(); g.moveTo(cx - 2, shY + 2 + o); g.quadraticCurveTo(cx - 12, shY - 13 - fl + o * 1.5, cx - 21 + i * 4, shY - 4 - fl + o); g.quadraticCurveTo(cx - 12, shY + 2 + o, cx - 3, shY + 7 + o); g.fill(); }); }
+    const cp = P.cape || P.scarf;
+    if (cp) { const f = Math.sin(T * 5) * 1.5 + (walking ? 2 : 0); g.fillStyle = cp; g.beginPath(); g.moveTo(cx - 2, shY); g.quadraticCurveTo(cx - 8 - f, shY + 6, cx - 9 - f * 1.5, P.cape ? fy - 3 : shY + 5 + f); g.lineTo(cx - 4, P.cape ? fy - 5 : shY + 3); g.lineTo(cx + 1, shY + 2); g.fill(); }
+    // bras arrière, seconde lame, bouclier
+    g.strokeStyle = P.a; g.lineWidth = 2.3; line(cx - 3, shY + 1.5, cx - 4.5, shY + 8);
+    if (w.dual) { if (w.glow) { g.shadowColor = w.c; g.shadowBlur = 9; } g.strokeStyle = w.c; g.lineWidth = 1.1; line(cx - 4.5, shY + 8, cx - 8.5, shY + 15); g.shadowBlur = 0; }
+    // jambes
+    [[-1.6, sw], [1.6, -sw]].forEach(([o, q]) => { g.strokeStyle = P.p; g.lineWidth = 3; g.beginPath(); g.moveTo(cx + o, hipY); g.lineTo(cx + o + q * 1.5, hipY + 5); g.lineTo(cx + o + q * 3, fy - 1.4); g.stroke(); g.strokeStyle = P.o; g.lineWidth = 2.5; line(cx + o + q * 3, fy - 1.2, cx + o + q * 3 + 1.8, fy - 1); });
+    // buste
+    const tp = () => { g.beginPath(); g.moveTo(cx - 4.5, shY); g.lineTo(cx + 4.5, shY); g.lineTo(cx + 3, hipY + 1); g.lineTo(cx - 3, hipY + 1); g.closePath(); };
+    tp(); g.fillStyle = P.t; g.fill();
+    const sh = g.createLinearGradient(cx - 5, 0, cx + 5, 0); sh.addColorStop(0, 'rgba(0,0,0,.55)'); sh.addColorStop(.6, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(255,255,255,.2)'); tp(); g.fillStyle = sh; g.fill();
+    g.fillStyle = P.b; g.fillRect(cx - 3.2, hipY - 1, 6.4, 1.3);
+    if (P.shield) { g.fillStyle = P.shield; g.beginPath(); g.ellipse(cx - 5.5, shY + 7, 2.8, 4.4, 0, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.3)'; g.beginPath(); g.ellipse(cx - 5, shY + 5.5, 1, 1.8, 0, 0, 7); g.fill(); }
+    // tête
+    g.fillStyle = P.s; g.beginPath(); g.arc(cx, hdY, 3, 0, 7); g.fill();
+    g.fillStyle = P.h; g.beginPath(); g.arc(cx, hdY, 3.2, Math.PI * .62, Math.PI * 1.92); g.closePath(); g.fill();
+    if (P.mask) { g.fillStyle = P.mask; g.beginPath(); g.arc(cx, hdY, 3.1, -.1, Math.PI * .8); g.closePath(); g.fill(); }
+    if (P.hat) { g.fillStyle = P.h; g.beginPath(); g.moveTo(cx - 7, hdY - 1); g.lineTo(cx + .5, hdY - 6); g.lineTo(cx + 7.5, hdY - 1); g.closePath(); g.fill(); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(cx - 7, hdY - 1.4, 14.5, .6); }
+    if (P.e !== EYE) { g.shadowColor = P.e; g.shadowBlur = 7; } g.fillStyle = P.e; g.fillRect(cx + 1.2, hdY - .5, 1.1, .8); g.shadowBlur = 0;
+    if (P.plume) { g.strokeStyle = P.plume; g.lineWidth = 1.5; g.beginPath(); g.moveTo(cx, hdY - 3); g.quadraticCurveTo(cx - 2, hdY - 8, cx - 6, hdY - 5 + Math.sin(T * 5)); g.stroke(); }
+    if (P.halo) { g.shadowColor = '#fff3b0'; g.shadowBlur = 9; g.strokeStyle = '#fff3b0'; g.lineWidth = .8; g.beginPath(); g.ellipse(cx, hdY - 6.5, 4.4, 1.2, 0, 0, 7); g.stroke(); g.shadowBlur = 0; }
+    // bras avant et arme
+    const hxh = cx + (atk ? 7 : 5), hyh = shY + (atk ? 4 : 7), an = atk ? -1.9 + Math.max(0, Math.min(1, (ak - .38) / .42)) * 2.5 : -1.2, dx = Math.cos(an), dy = Math.sin(an);
+    g.strokeStyle = P.a; g.lineWidth = 2.4; line(cx + 3, shY + 1.5, hxh, hyh);
+    if (w.k === 'fork') {
+      g.strokeStyle = '#8a6a3f'; g.lineWidth = 1.1; line(hxh - dx * 5, hyh - dy * 5, hxh + dx * 15, hyh + dy * 15);
+      g.strokeStyle = '#c3c9cf'; g.lineWidth = .8; [-1, 0, 1].forEach(o => line(hxh + dx * 15 - dy * o * 1.6, hyh + dy * 15 + dx * o * 1.6, hxh + dx * 19 - dy * o * 1.6, hyh + dy * 19 + dx * o * 1.6));
+      line(hxh + dx * 15 + dy * 1.6, hyh + dy * 15 - dx * 1.6, hxh + dx * 15 - dy * 1.6, hyh + dy * 15 + dx * 1.6);
+      return;
+    }
+    const L = w.len * 1.9 + 3;
+    if (atk) { g.strokeStyle = rgba(w.c, .35); g.lineWidth = 2.6; g.beginPath(); g.arc(hxh, hyh, L - 1, an - 1.2, an); g.stroke(); }
+    if (w.glow) { g.shadowColor = w.c; g.shadowBlur = 12; }
+    g.strokeStyle = w.c; g.lineWidth = w.thick ? 2 : 1.2; line(hxh + dx * 1.5, hyh + dy * 1.5, hxh + dx * L, hyh + dy * L); g.shadowBlur = 0;
+    g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = .4; line(hxh + dx * 2, hyh + dy * 2, hxh + dx * (L - 1), hyh + dy * (L - 1));
+    g.strokeStyle = '#c8a04a'; g.lineWidth = 1; line(hxh + dx * 1.5 - dy * 1.8, hyh + dy * 1.5 + dx * 1.8, hxh + dx * 1.5 + dy * 1.8, hyh + dy * 1.5 - dx * 1.8);
+  }
+  // monstres : la silhouette du sprite est refondue en formes pleines et ombrées, yeux luisants (mise en cache)
+  function monCanvas(m) {
+    if (m._r) return m._r;
+    const rows = SHAPES[m.s], u = m.sc * RK, pad = u * 2, cw = rows[0].length * u + pad * 2, ch = rows.length * u + pad * 2;
+    const c = document.createElement('canvas'); c.width = cw; c.height = ch; const x = c.getContext('2d');
+    const dot = (i, j, r) => { x.beginPath(); x.arc(pad + i * u + u / 2, pad + j * u + u / 2, r, 0, 7); x.fill(); };
+    rows.forEach((row, j) => { for (let i = 0; i < row.length; i++) { const col = row[i] === 'e' ? m.p.a : m.p[row[i]]; if (col) { x.fillStyle = col; dot(i, j, u * .76); } } });
+    x.globalCompositeOperation = 'source-atop';
+    const gr = x.createLinearGradient(0, pad, 0, ch - pad); gr.addColorStop(0, 'rgba(255,255,255,.2)'); gr.addColorStop(.45, 'rgba(0,0,0,.08)'); gr.addColorStop(1, 'rgba(0,0,0,.62)'); x.fillStyle = gr; x.fillRect(0, 0, cw, ch);
+    const rim = x.createLinearGradient(0, 0, cw, 0); rim.addColorStop(0, 'rgba(255,255,255,.22)'); rim.addColorStop(.3, 'rgba(255,255,255,0)'); x.fillStyle = rim; x.fillRect(0, 0, cw, ch);
+    x.globalCompositeOperation = 'source-over'; x.shadowColor = m.p.e; x.shadowBlur = u * 1.6; x.fillStyle = m.p.e;
+    rows.forEach((row, j) => { for (let i = 0; i < row.length; i++) if (row[i] === 'e') { dot(i, j, u * .46); dot(i, j, u * .46); } });
+    const wc = document.createElement('canvas'); wc.width = cw; wc.height = ch; const y = wc.getContext('2d');
+    y.drawImage(c, 0, 0); y.globalCompositeOperation = 'source-atop'; y.fillStyle = 'rgba(255,255,255,.9)'; y.fillRect(0, 0, cw, ch);
+    return m._r = { c, wc, pad: pad / RK, w: cw / RK, h: ch / RK };
+  }
+  function monReal(m, x, y, flash, mp, T) {
+    const r = monCanvas(m);
+    if (!m.fly) { g.fillStyle = 'rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(x + mp.w / 2, GY + .6, mp.w * .48, 1.8, 0, 0, 7); g.fill(); }
+    if (m.boss) { const cx = x + mp.w / 2, cy = y + mp.h / 2, rr = Math.max(mp.w, mp.h) * (.85 + Math.sin(T * 4) * .08), gr = g.createRadialGradient(cx, cy, 2, cx, cy, rr); gr.addColorStop(0, 'rgba(255,60,80,.38)'); gr.addColorStop(1, 'rgba(255,60,80,0)'); g.fillStyle = gr; g.fillRect(cx - rr, cy - rr, rr * 2, rr * 2); }
+    g.drawImage(flash ? r.wc : r.c, x - r.pad, y - r.pad, r.w, r.h);
+  }
   function draw(s) {
-    g = s.ctx; const m = s.m, e = s.ev, T = s.time;
-    g.setTransform(1, 0, 0, 1, 0, 0);
-    if (T < s.shake) { R('#000', 0, 0, W, H); const q0 = Math.floor(T * 40); g.setTransform(1, 0, 0, 1, Math.round((hash(q0) - .5) * 4), Math.round((hash(q0 + 9) - .5) * 4)); }
-    BG[s.z](s.sx, T);
+    g = s.ctx; const m = s.m, e = s.ev, T = s.time, K = s.K, real = s.real;
+    g.setTransform(K, 0, 0, K, 0, 0);
+    if (T < s.shake) { R('#000', 0, 0, W, H); const q0 = Math.floor(T * 40); g.setTransform(K, 0, 0, K, Math.round((hash(q0) - .5) * 4) * K, Math.round((hash(q0 + 9) - .5) * 4) * K); }
+    if (real) bgReal(s.z, s.sx, T); else BG[s.z](s.sx, T);
     const inEv = s.phase === 'ev', walking = s.phase === 'walk' || s.phase === 'approach' || (inEv && e.t === 'zone');
     const fr = walking ? Math.floor(T * 6) % 2 : 0;
-    let hx = HX, atk = false, mxo = 0, hide = false, tier = s.tier;
+    let hx = HX, atk = false, ak = 0, mxo = 0, hide = false, tier = s.tier;
     if (s.phase === 'fight') {
       const k = (s.t % BEAT) / BEAT, lun = k < .3 ? -3 * (k / .3) : k < .5 ? -3 + 13 * ((k - .3) / .2) : 10 * (1 - (k - .5) / .5);
-      if (s.beat % 2 === 0) { hx += lun; atk = k > .38 && k < .8; } else mxo = -lun;
+      if (s.beat % 2 === 0) { hx += lun; atk = k > .38 && k < .8; ak = k; } else mxo = -lun;
     }
     if (T >= s.hhit && T < s.hhit + .16) { hx -= 3; hide = Math.floor(T * 30) % 2 === 0; }
     if (s.phase === 'lose') { hx -= Math.min(1, s.t / .25) * 14 * (1 - Math.max(0, Math.min(1, (s.t - 1.2) / .6))); hide = s.t < 1.1 && Math.floor(s.t * 14) % 2 === 0; }
@@ -506,8 +629,11 @@
     if (m && s.phase !== 'win') {
       const mp = mpos(s), rows = SHAPES[m.s], mb = (!m.fly && s.phase !== 'fight' && Math.floor(T * 6) % 2) ? 1 : 0, x = mp.x + Math.round(mxo);
       if (T < s.charge) { const a = 1 - (s.charge - T) / (BEAT * .45); g.globalAlpha = .1; R('#ff5d73', 0, 0, W, H); g.globalAlpha = .2 + a * .35; disc(x + mp.w / 2, mp.y + mp.h / 2, Math.round(6 + a * Math.max(mp.w, mp.h) * .6), '#ff5d73'); g.globalAlpha = 1; }
-      if (m.boss) for (let k = 0; k < 14; k++) { const n = k + Math.floor(T * 6) * 17; R(k % 2 ? '#ff5d73' : '#ffd84a', x - 4 + hash(n) * (mp.w + 8), mp.y - 5 + hash(n + 3) * (mp.h + 5), 1, 1); }
-      spr(rows, T < s.mflash ? white(m) : m.p, x, mp.y - mb, m.sc);
+      if (real) monReal(m, real ? s.mx + mxo : x, mp.y - (real ? 0 : mb), T < s.mflash, mp, T);
+      else {
+        if (m.boss) for (let k = 0; k < 14; k++) { const n = k + Math.floor(T * 6) * 17; R(k % 2 ? '#ff5d73' : '#ffd84a', x - 4 + hash(n) * (mp.w + 8), mp.y - 5 + hash(n + 3) * (mp.h + 5), 1, 1); }
+        spr(rows, T < s.mflash ? white(m) : m.p, x, mp.y - mb, m.sc);
+      }
     }
     if (inEv && e.t === 'lvl') {
       const a = Math.min(1, s.t / .4) * (1 - Math.max(0, (s.t - 1.9) / .5));
@@ -515,27 +641,37 @@
       for (let i = 0; i < 16; i++) R(i % 2 ? '#fff' : '#9ad6ff', hx - 4 + hash(i) * 28, GY - ((s.t * 60 * (1 + hash(i + 3)) + hash(i + 7) * GY) % GY), 1, 3);
       const r = (s.t * 30) % 26; R('#fff', hx + 10 - r, GY - 1, r * 2, 1); g.globalAlpha = 1;
     }
-    if (!hide) drawHero(Math.round(hx), GY - 26 - (walking && fr ? 1 : 0), 2, tier, fr, atk, T);
-    s.fx.forEach(k => drawFx(s, k));
+    if (!hide) { if (real) heroReal(hx, tier, walking, atk, ak, T); else drawHero(Math.round(hx), GY - 26 - (walking && fr ? 1 : 0), 2, tier, fr, atk, T); }
+    if (real) g.shadowBlur = 10;
+    s.fx.forEach(k => { if (real) g.shadowColor = k.c || '#ffffff'; drawFx(s, k); });
+    if (real) g.shadowColor = '#ffd84a';
     if (s.parts.length) { const ag = T - s.pt0; if (ag > 1.3) s.parts = []; else { g.globalAlpha = Math.max(0, 1 - ag / 1.3); s.parts.forEach(p => R(p.c, p.x + p.vx * ag, p.y + p.vy * ag + 70 * ag * ag, p.s, p.s)); g.globalAlpha = 1; } }
     s.sparks.forEach(k => { if (T >= k.t0) { R('#fff', k.x - 3, k.y, 7, 1); R('#fff', k.x, k.y - 3, 1, 7); R('#ffd84a', k.x - 2, k.y - 2, 1, 1); R('#ffd84a', k.x + 2, k.y + 2, 1, 1); R('#ffd84a', k.x + 2, k.y - 2, 1, 1); R('#ffd84a', k.x - 2, k.y + 2, 1, 1); } });
+    g.shadowBlur = 0;
     if (inEv && e.t === 'tier') {
       const f = Math.max(0, 1 - Math.abs(s.t - 1.6) / .3);
       if (f) { g.globalAlpha = f * .9; R('#fff', 0, 0, W, H); g.globalAlpha = 1; }
       if (s.t > 1.6 && s.t < 2.6) { g.globalAlpha = 1 - (s.t - 1.6); const d = (s.t - 1.6) * 60; for (let i = 0; i < 14; i++) { const an = i / 14 * Math.PI * 2; R(i % 2 ? '#c4b5ff' : '#fff', hx + 10 + Math.cos(an) * d, GY - 13 + Math.sin(an) * d, 2, 2); } g.globalAlpha = 1; }
     }
+    if (real) postReal(s.z, T);
     if (inEv && e.t === 'zone') { g.globalAlpha = s.t < 1.2 ? s.t / 1.2 : Math.max(0, 1 - (s.t - 1.2) / 1.2); R('#000', 0, 0, W, H); g.globalAlpha = 1; }
-    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.setTransform(K, 0, 0, K, 0, 0);
+  }
+  function setMode(real) {
+    const s = st; if (!s) return;
+    s.real = !!real; s.K = real ? RK : 1; s.canvas.width = W * s.K; s.canvas.height = H * s.K; s.canvas.classList.toggle('real', s.real);
+    s.ctx.imageSmoothingEnabled = s.real; draw(s);
   }
   function stop() { if (raf) cancelAnimationFrame(raf); raf = 0; st = null; }
   function start(canvas, o) {
     stop();
-    canvas.width = W; canvas.height = H;
-    const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = false;
+    const real = !!o.real, K = real ? RK : 1;
+    canvas.width = W * K; canvas.height = H * K; canvas.classList.toggle('real', real);
+    const ctx = canvas.getContext('2d'); ctx.imageSmoothingEnabled = real;
     let level = o.level; const target = Math.max(level, o.target || level);
     const still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (still && target > level) { level = target; if (o.onSeen) o.onSeen(target); }   // sans animations : on acte directement
-    const s = st = { canvas, ctx, box: canvas.parentNode, cap: o.cap, name: o.name || 'Le héros', onSeen: o.onSeen, onDone: o.onDone, level, z: zoneIdx(level), tier: tierIdx(level),
+    const s = st = { canvas, ctx, real, K, box: canvas.parentNode, cap: o.cap, name: o.name || 'Le héros', onSeen: o.onSeen, onDone: o.onDone, level, z: zoneIdx(level), tier: tierIdx(level),
       queue: buildQueue(level, target), ev: null, phase: 'walk', t: 0, time: 0, sx: 0, m: null, mx: 0, sparks: [], fx: [], parts: [], pt0: 0, n: 0, shake: 0, mflash: 0, hhit: -9, charge: 0, hits: 0, doneAt: 0 };
     let last = performance.now();
     const loop = now => {
@@ -553,5 +689,5 @@
     drawHero(11, 20, 2, tierIdx(level), 0, false, 0);
   }
 
-  window.RPG = { MAX, need, levelOf, streakMult, sessionXp, TIERS, ZONES, tierIdx, zoneIdx, buildQueue, start, stop, portrait, tick: dt => { const s = st; if (s) { update(s, dt); if (st === s) draw(s); } } };
+  window.RPG = { MAX, need, levelOf, streakMult, sessionXp, TIERS, ZONES, tierIdx, zoneIdx, buildQueue, start, stop, setMode, portrait, tick: dt => { const s = st; if (s) { update(s, dt); if (st === s) draw(s); } } };
 })();

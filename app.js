@@ -365,7 +365,7 @@
     const Lr = RPG.levelOf(totalXp()), L = seenLvl(Lr);
     document.querySelectorAll('canvas[data-me]').forEach(c => RPG.portrait(c, L));
     const c = $('#adv'); if (!c) { RPG.stop(); return; }
-    RPG.start(c, { level: L, target: Lr, cap: $('#advcap'), name: S.name,
+    RPG.start(c, { level: L, target: Lr, cap: $('#advcap'), name: S.name, real: S.opts.gfx === 'real',
       onSeen: l => { S.adv = { seen: l }; save(); },
       onDone: () => { if (V.tab === 'adv' && !top()) render(); } });
   }
@@ -380,7 +380,7 @@
     }).join('');
     const tiers = RPG.TIERS.map((t, i) => `<div class="rk"><div class="grow"><b>${L >= t.l ? esc(t.t) : '???'}</b><div class="mut" style="font-size:12.5px">${L >= t.l ? esc(t.g) : 'Se débloque au niveau ' + t.l}</div></div>${i === ti ? '<span class="tagc">Actuel</span>' : ''}</div>`).join('');
     const bd = badges().map(b => `<div class="rk"><div class="grow"><b class="${b[2] ? '' : 'mut'}">${b[0]}</b><div class="mut" style="font-size:12.5px">${b[1]}</div></div>${b[2] ? '<span class="chip ok">Obtenu</span>' : ''}</div>`).join('');
-    return `<div class="sect-h first"><h2>Aventure</h2><span class="chip">${esc(RPG.ZONES[zi].n)}</span></div>
+    return `<div class="sect-h first"><h2>Aventure</h2><button class="btn sm ghost" data-act="gfx">Style : ${S.opts.gfx === 'real' ? 'Réaliste' : 'Pixel'}</button></div>
       <div class="scene"><div class="hud"><b>NIV. ${L}</b><span>${esc(RPG.TIERS[ti].t)}</span><div class="xp"><i style="width:${Math.min(100, L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div></div>${pending ? '<button class="skip" data-act="advSkip">Passer</button>' : ''}<canvas id="adv" width="144" height="128"></canvas><div id="advcap" class="cap">${esc(S.name)} avance dans ${esc(RPG.ZONES[zi].n.toLowerCase())}.</div></div>
       <div class="card me"><canvas data-me class="px" width="40" height="48"></canvas><div class="grow"><div class="eyebrow">Niveau ${L}</div><h3>${esc(S.name)}, ${esc(RPG.TIERS[ti].t)}</h3>
         <div class="xp"><i style="width:${Math.min(100, L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div><p class="mut" style="font-size:12.5px">${pending ? 'Montée de niveau en cours…' : L >= RPG.MAX ? xp + ' XP · niveau maximum atteint' : (xp - xa) + ' / ' + (xb - xa) + ' XP · niveau ' + (L + 1) + ' dans ' + (xb - xp) + ' XP'}</p></div></div>
@@ -565,6 +565,7 @@
   /* ---------- actions ---------- */
   const A = {
     toAdv() { closeSheet(); setTab('adv'); },
+    gfx(t) { const real = S.opts.gfx !== 'real'; S.opts.gfx = real ? 'real' : 'pixel'; save(); RPG.setMode(real); t.textContent = 'Style : ' + (real ? 'Réaliste' : 'Pixel'); },
     advSkip() { S.adv = { seen: RPG.levelOf(totalXp()) }; save(); render(); },
     spam() {
       const seen = {}, list = [];
