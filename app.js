@@ -365,7 +365,10 @@
     const Lr = RPG.levelOf(totalXp()), L = seenLvl(Lr);
     document.querySelectorAll('canvas[data-me]').forEach(c => RPG.portrait(c, L));
     const c = $('#adv'); if (!c) { RPG.stop(); return; }
-    RPG.start(c, { level: L, target: Lr, cap: $('#advcap'), name: S.name, real: S.opts.gfx === 'real',
+    const now = new Date(), mon = new Date(now), last = S.logs[S.logs.length - 1]; mon.setDate(now.getDate() - (now.getDay() + 6) % 7); let did = 0;
+    for (let i = 0; i < 7; i++) { const d = new Date(mon); d.setDate(mon.getDate() + i); if (S.logs.some(l => logDay(l) === isoDay(d))) did++; }
+    const stats = { n: S.logs.length, streak: streakNow(), did, planned: S.week.filter(d => d.p).length, full: !!(last && last.full), spam: !!(last && last.spam), rec: (last && last.rec) || 0, days: last ? Math.floor((Date.now() - Date.parse(last.date)) / 864e5) : 0 };
+    RPG.start(c, { level: L, target: Lr, cap: $('#advcap'), name: S.name, real: S.opts.gfx === 'real', stats,
       onSeen: l => { S.adv = { seen: l }; save(); },
       onDone: () => { if (V.tab === 'adv' && !top()) render(); } });
   }

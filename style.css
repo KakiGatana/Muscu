@@ -323,3 +323,12 @@ details.hist li{padding:6px 0;border-top:1px solid var(--line);margin:0}
 .pend{color:#c4b5ff;font-weight:700;text-shadow:0 0 10px rgba(139,108,255,.8)}
 
 .scene canvas.real{image-rendering:auto}
+
+/* PNJ, esquive, parade, défaite */
+.scene .bubble{position:absolute;left:10px;right:10px;top:54px;z-index:3;padding:9px 12px 10px;border-radius:5px;background:rgba(6,10,20,.9);border:1px solid var(--a2);box-shadow:0 0 16px rgba(77,163,255,.4);animation:fade .3s}
+.bubble b{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--a2);margin-bottom:3px}
+.bubble p{font-size:13.5px;line-height:1.35;color:var(--tx)}
+.scene .fxt{position:absolute;left:12%;top:50%;z-index:3;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;pointer-events:none;opacity:0;animation:fxt .9s both}
+.fxt.par{color:#9ad6ff;text-shadow:0 0 10px #4da3ff}.fxt.dod{color:#d6ccff;text-shadow:0 0 10px #8b6cff}
+@keyframes fxt{0%{opacity:0;transform:translateY(8px)}20%{opacity:1}100%{opacity:0;transform:translateY(-26px)}}
+.fxb.ko{border-color:#ff5d73;box-shadow:0 0 30px rgba(255,93,115,.6)}.fxb.ko small{color:#ff9aa8}.fxb.ko b{font-size:17px;text-shadow:0 0 14px #ff5d73}
