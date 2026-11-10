@@ -137,6 +137,10 @@
   };
   const HB = ['...hhhh...', '..hhhhhh..', '..hsssss..', '..hssese..', '..ssssss..', '...tttt...', '.atttttta.', '.atttttta.', '.sbbbbbbs.', '..pppppp..'];
   const LEGS = [['..pp..pp..', '..pp..pp..', '..oo..ooo.'], ['..pppppp..', '...pppp...', '...oooo...']];
+  // silhouette selon l'alimentation : ok, fat (alourdi), thin (sous-alimenté), fit / peak (affûté)
+  let BODY = 'ok';
+  const BROWS = { fat: ['...tttt...', '.atttttttt', '.atttttttt', '.sbbbbbbbb'], thin: ['...tttt...', '..atttta..', '..atttta..', '..sbbbbs..'], fit: ['..tttttt..', 'aattttttaa', '.atttttta.', '.sbbbbbbs.'] };
+  const bodyRows = () => { const b = BROWS[BODY === 'peak' ? 'fit' : BODY]; return b ? HB.slice(0, 5).concat(b, HB.slice(9)) : HB; };
   const SKIN = '#e8b98a', EYE = '#2a1c12', RB = ['#ff7ad9', '#ffd76a', '#6fe3ff', '#b388ff', '#fff'];
   const HP = [
     { h: '#d9b44a', hat: 1, t: '#b8a27a', a: '#b8a27a', b: '#5a3d22', p: '#6b5a45', o: '#3b2a1a', w: { k: 'fork' } },
@@ -169,7 +173,8 @@
     if (P.wings) { R(P.wings, x - 3 * sc, y + (2 - f2) * sc, 3 * sc, sc); R(P.wings, x - 5 * sc, y + (3 - f2) * sc, 5 * sc, sc); R(P.wings, x - 4 * sc, y + (4 - f2) * sc, 4 * sc, sc); R(P.wings, x - 3 * sc, y + (5 - f2) * sc, 3 * sc, sc); R(P.wings, x - 2 * sc, y + (6 - f2) * sc, 2 * sc, sc); }
     if (P.cape) { R(P.cape, x + sc, y + 5 * sc, sc, 6 * sc); R(P.cape, x, y + 7 * sc, sc, (frame ? 4 : 5) * sc); }
     if (P.scarf) { R(P.scarf, x - 2 * sc, y + (4 + f2) * sc, 4 * sc, sc); R(P.scarf, x - 4 * sc, y + (5 - f2) * sc, 3 * sc, sc); }
-    spr(HB.concat(LEGS[frame]), P, x, y, sc);
+    spr(bodyRows().concat(LEGS[frame]), P, x, y, sc);
+    if (BODY === 'peak') for (let k = 0; k < 4; k++) { const n = k + Math.floor(t * 4) * 7; R('#fff', x + hash(n) * 10 * sc, y + hash(n + 2) * 12 * sc, 1, 1); }
     if (P.mask) R(P.mask, x + 2 * sc, y + 4 * sc, 6 * sc, sc);
     if (P.hat) R(P.h, x + sc, y + sc, 8 * sc, sc);
     if (P.plume) { R(P.plume, x + 3 * sc, y - 2 * sc, sc, 2 * sc); R(P.plume, x + 2 * sc, y - 2 * sc, sc, sc); }
@@ -552,6 +557,9 @@
     else if (t.pdc) out.push('Pas de salle, pas d\'excuse : tu t\'es entraîné au poids du corps. Respect.', 'Ton propre poids comme seule charge. Les anciens chasseurs ne faisaient pas autrement.');
     else out.push('Tu as écourté ta dernière séance, non ? Le prochain boss ne te fera pas ce cadeau.', 'Séance incomplète la dernière fois. Ça arrive. Deux fois de suite, c\'est un choix.');
     if (t.sets >= 20) out.push(t.sets + ' séries à ta dernière séance. Tu ne fais pas semblant.');
+    if (t.body === 'fat') out.push('Tu as pris du ventre, chasseur. Ce que tu manges pèse plus lourd que ce que tu soulèves, ces jours-ci.');
+    if (t.body === 'thin') out.push('Tu flottes dans ta tenue. On ne gagne pas un combat le ventre vide : mange.');
+    if (t.body === 'fit' || t.body === 'peak') out.push('Tu t\'es affûté. Ça se voit : tu manges comme quelqu\'un qui sait où il va.');
     if (t.rec) out.push('Un record à ta dernière séance, à ce qu\'on raconte. Continue comme ça.', 'Tu soulèves plus lourd qu\'avant. Ici, ça se remarque.');
     if (t.planned) out.push(t.did >= t.planned ? 'Toutes tes séances de la semaine sont faites. Rien à redire.' : t.did + ' séance' + (t.did > 1 ? 's' : '') + ' sur ' + t.planned + ' cette semaine. Il reste du chemin.');
     if (t.n >= 10) out.push(t.n + ' séances au compteur. Tu n\'es plus un débutant, arrête de te comporter comme tel.');
@@ -730,10 +738,12 @@
     // jambes
     [[-1.6, sw], [1.6, -sw]].forEach(([o, q]) => { g.strokeStyle = P.p; g.lineWidth = 3; g.beginPath(); g.moveTo(cx + o, hipY); g.lineTo(cx + o + q * 1.5, hipY + 5); g.lineTo(cx + o + q * 3, fy - 1.4); g.stroke(); g.strokeStyle = P.o; g.lineWidth = 2.5; line(cx + o + q * 3, fy - 1.2, cx + o + q * 3 + 1.8, fy - 1); });
     // buste
-    const tp = () => { g.beginPath(); g.moveTo(cx - 4.5, shY); g.lineTo(cx + 4.5, shY); g.lineTo(cx + 3, hipY + 1); g.lineTo(cx - 3, hipY + 1); g.closePath(); };
+    const bd = BODY === 'peak' ? 'fit' : BODY, sw2 = bd === 'fat' ? 4.8 : bd === 'thin' ? 3.6 : bd === 'fit' ? 5.5 : 4.5, ww = bd === 'fat' ? 4.4 : bd === 'thin' ? 2.3 : bd === 'fit' ? 2.8 : 3;
+    const tp = () => { g.beginPath(); g.moveTo(cx - sw2, shY); g.lineTo(cx + sw2, shY); g.lineTo(cx + ww, hipY + 1); g.lineTo(cx - ww, hipY + 1); g.closePath(); if (bd === 'fat') g.ellipse(cx + 2.2, hipY - 3, 3.6, 3.8, 0, 0, 7); };
     tp(); g.fillStyle = P.t; g.fill();
     const sh = g.createLinearGradient(cx - 5, 0, cx + 5, 0); sh.addColorStop(0, 'rgba(0,0,0,.55)'); sh.addColorStop(.6, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(255,255,255,.2)'); tp(); g.fillStyle = sh; g.fill();
-    g.fillStyle = P.b; g.fillRect(cx - 3.2, hipY - 1, 6.4, 1.3);
+    g.fillStyle = P.b; g.fillRect(cx - ww - .2, hipY - 1, ww * 2 + .4 + (bd === 'fat' ? 1.6 : 0), 1.3);
+    if (BODY === 'peak') { g.fillStyle = '#fff'; for (let k = 0; k < 4; k++) { const n = k + Math.floor(T * 4) * 7; g.fillRect(cx - 8 + hash(n) * 16, shY - 6 + hash(n + 2) * 22, .6, .6); } }
     if (P.shield) { g.fillStyle = P.shield; g.beginPath(); g.ellipse(cx - 5.5, shY + 7, 2.8, 4.4, 0, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.3)'; g.beginPath(); g.ellipse(cx - 5, shY + 5.5, 1, 1.8, 0, 0, 7); g.fill(); }
     // tête
     g.fillStyle = P.s; g.beginPath(); g.arc(cx, hdY, 3, 0, 7); g.fill();
@@ -993,5 +1003,5 @@
     drawHero(11, 20, 2, tierIdx(level), 0, false, 0);
   }
 
-  window.RPG = { MAX, need, levelOf, streakMult, sessionXp, TIERS, ZONES, tierIdx, zoneIdx, buildQueue, start, stop, setMode, portrait, tick: dt => { const s = st; if (s) { update(s, dt); if (st === s) draw(s); } } };
+  window.RPG = { MAX, need, levelOf, streakMult, sessionXp, TIERS, ZONES, tierIdx, zoneIdx, buildQueue, start, stop, setMode, setBody: b => { BODY = b || 'ok'; }, portrait, tick: dt => { const s = st; if (s) { update(s, dt); if (st === s) draw(s); } } };
 })();
