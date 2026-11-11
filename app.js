@@ -29,7 +29,9 @@
       if (i >= 0) p.ex.splice(i, 1, { id: p.ex[i].id, sec: p.ex[i].sec, n: 'Skips (montées de genoux explosives)', sets: 3, reps: '15 m', rest: 60, start: '', note: 'Appuis légers et rapides, à faire dehors. Pas de réception violente (genou).', kind: 'b', key: false });
     },
     // 2 : XP rétroactive pour les séances faites avant l'arrivée de l'aventure (3 XP par série, sans bonus)
-    s => { s.logs.forEach(l => { if (l.xp == null) { l.xp = l.ex.reduce((n, e) => n + Math.min(8, e.sets.length) * 3, 0); l.streak = l.streak || 1; l.mult = 1; } }); }
+    s => { s.logs.forEach(l => { if (l.xp == null) { l.xp = l.ex.reduce((n, e) => n + Math.min(8, e.sets.length) * 3, 0); l.streak = l.streak || 1; l.mult = 1; } }); },
+    // 3 : sevrage rééquilibré (5 XP par jour, paliers divisés par deux, 2 XP par envie)
+    s => { const q = s.quit; if (!q) return; const b = { 1: 10, 3: 20, 7: 40, 14: 50, 30: 100, 90: 200, 180: 300, 365: 500 }; q.xp = (q.claimed || 0) * 5 + (q.ms || []).reduce((n, d) => n + (b[d] || 0), 0) + Math.min(q.wins || 0, 3) * 2; }
   ];
   function migrate(s) { for (let i = s.patchV || 0; i < PATCHES.length; i++) { try { PATCHES[i](s); } catch (e) { } } s.patchV = PATCHES.length; return s; }
 
@@ -362,7 +364,7 @@
     return n;
   }
   /* ----- Sevrage (cigarette et vape) ----- */
-  const QMS = [[1, 20, '24 heures'], [3, 40, '3 jours'], [7, 80, '1 semaine'], [14, 100, '2 semaines'], [30, 200, '1 mois'], [90, 400, '3 mois'], [180, 600, '6 mois'], [365, 1000, '1 an']];
+  const QMS = [[1, 10, '24 heures'], [3, 20, '3 jours'], [7, 40, '1 semaine'], [14, 50, '2 semaines'], [30, 100, '1 mois'], [90, 200, '3 mois'], [180, 300, '6 mois'], [365, 500, '1 an']];
   const QFACTS = ['Après 24 heures, le monoxyde de carbone a quitté ton sang et l\'oxygène circule mieux.', 'Vers 3 jours, la nicotine est éliminée. C\'est le pic du manque : à partir d\'ici, ça redescend.',
     'En 2 à 12 semaines, la circulation et le souffle s\'améliorent : tu le sentiras sur tes sprints et tes séries longues.', 'Entre 1 et 9 mois, la toux et l\'essoufflement diminuent.', 'À 1 an, le sur-risque cardiaque lié au tabac est à peu près divisé par deux.'];
   const quit = () => (S.quit = S.quit || { start: null, claimed: 0, xp: 0, best: 0, ms: [], slips: 0, crav: { d: '', n: 0 }, wins: 0, duel: false, cost: 0 });
@@ -371,7 +373,7 @@
   function quitSync() {
     const q = quit(); if (!q.start) return;
     const n = quitDays(); let ch = false;
-    if (n > q.claimed) { q.xp += (n - q.claimed) * 10; q.claimed = n; ch = true; }
+    if (n > q.claimed) { q.xp += (n - q.claimed) * 5; q.claimed = n; ch = true; }
     QMS.forEach(m => { if (n >= m[0] && q.ms.indexOf(m[0]) < 0) { q.ms.push(m[0]); q.xp += m[1]; ch = true; } });
     if (n > q.best) { q.best = n; ch = true; }
     if (ch) save();
@@ -379,7 +381,7 @@
   function quitCard() {
     const q = quit();
     if (!q.start) return `<div class="sect-h"><h2>Sevrage</h2></div><div class="card"><p style="font-size:14px;margin-bottom:6px"><b>Arrêt de la cigarette et de la vape.</b></p>
-      <p class="mut" style="font-size:13.5px;margin-bottom:12px">Chaque jour tenu rapporte 10 XP, chaque palier un bonus, et chaque envie surmontée devient un combat contre le Démon de fumée.${q.best ? ' Ton record : ' + q.best + ' jour' + (q.best > 1 ? 's' : '') + '.' : ''}</p>
+      <p class="mut" style="font-size:13.5px;margin-bottom:12px">Chaque jour tenu rapporte 5 XP, chaque palier un bonus, et chaque envie surmontée devient un combat contre le Démon de fumée.${q.best ? ' Ton record : ' + q.best + ' jour' + (q.best > 1 ? 's' : '') + '.' : ''}</p>
       <button class="btn pri xl" data-act="quitStart">${q.slips ? 'Reprendre le sevrage' : 'J\'arrête maintenant'}</button></div>`;
     const ms = Date.now() - Date.parse(q.start), n = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24, next = QMS.find(m => n < m[0]), prev = QMS.filter(m => n >= m[0]).pop();
     const from = prev ? prev[0] : 0, pct = next ? Math.min(100, Math.round((ms / 864e5 - from) / (next[0] - from) * 100)) : 100;
@@ -458,7 +460,7 @@
         <li><b>3 XP</b> par série validée, <b>2 XP</b> par échauffement, <b>+15</b> si la séance est faite en entier, <b>+5</b> par record.</li>
         <li>Le total est multiplié par ta série : ×1 le premier jour, puis +0,25 par jour d'entraînement d'affilée, jusqu'à ×2,5.</li>
         <li>La série ne dépend pas du planning. Un jour sans séance est toléré ; elle casse après deux jours sans séance d'affilée, ou si tu alternes un jour sur deux (repos, séance, repos).</li>
-        <li>Sevrage : 10 XP par jour sans fumer, un bonus à chaque palier, 5 XP par envie surmontée.</li>
+        <li>Sevrage : 5 XP par jour sans fumer, un bonus à chaque palier (10 à 500 XP), 2 XP par envie surmontée (3 par jour au plus). C'est volontairement moins que la salle : sur un an, le sevrage pèse environ 10 % de ton XP.</li>
         <li>Les séances spam et poids du corps comptent comme les autres, pour l'XP comme pour la série de jours : ce sont les séries validées qui paient, et le bonus de séance complète s'applique au poids du corps.</li>
         <li>Niveau maximum : <b>100</b>. À rythme régulier (environ 4 séances par semaine), compte à peu près un an pour le niveau 50 et quatre ans pour le niveau 100.</li></ul></details>
       <div class="sect-h"><h2>Le voyage</h2></div>${zones}
@@ -802,8 +804,8 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
     },
     quitWin() {
       const q = quit(), t = todayISO(); if (q.crav.d !== t) q.crav = { d: t, n: 0 };
-      const gain = q.crav.n < 6 ? 5 : 0; q.crav.n++; q.wins++; q.xp += gain; q.duel = true; save(); closeSheet(); setTab('adv');
-      toast(gain ? 'Envie surmontée · +5 XP' : 'Envie surmontée');
+      const gain = q.crav.n < 3 ? 2 : 0; q.crav.n++; q.wins++; q.xp += gain; q.duel = true; save(); closeSheet(); setTab('adv');
+      toast(gain ? 'Envie surmontée · +2 XP' : 'Envie surmontée');
     },
     async quitSlip() {
       if (!await ask('Noter une rechute ? Le compteur repart de zéro, ton XP et ton record restent.', 'Noter', false)) return;
