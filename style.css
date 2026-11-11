@@ -288,7 +288,7 @@ details.hist li{padding:6px 0;border-top:1px solid var(--line);margin:0}
 @keyframes spdraw{to{stroke-dashoffset:0}}
 @keyframes spfill{to{opacity:.14}}
 @keyframes sproll{from{transform:rotate(-110deg) scale(.7);opacity:0}30%{opacity:1}to{transform:rotate(0) scale(1)}}
-.sp-word{font-size:24px;font-weight:800;letter-spacing:.3em;padding-left:.3em;color:#fff;display:flex;text-shadow:0 0 16px rgba(77,163,255,.9)}
+.sp-word{font-size:21px;font-weight:800;letter-spacing:.24em;padding-left:.24em;color:#fff;display:flex;text-shadow:0 0 16px rgba(77,163,255,.9)}
 .sp-word span{opacity:0;animation:spw .5s both cubic-bezier(.2,.9,.3,1)}
 @keyframes spw{from{opacity:0;transform:translateY(10px)}to{opacity:1}}
 @media (prefers-reduced-motion:reduce){#splash *{animation-duration:.01s!important;animation-delay:0s!important}.lvlup{animation:none}}

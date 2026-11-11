@@ -367,6 +367,7 @@
     if (e.t === 'tier') { s.tier = e.i; if (hs) hs.textContent = TIERS[e.i].t; }
     if (e.t === 'zone') s.z = e.i;
     if (e.seen && s.onSeen) s.onSeen(e.seen);
+    if (e.cb) e.cb();
     s.phase = 'walk'; s.t = 0;
     if (!s.queue.length) s.doneAt = s.time + 1.8;
   }
@@ -987,6 +988,7 @@
     if (still && target > level) { level = target; if (o.onSeen) o.onSeen(target); }   // sans animations : on acte directement
     const s = st = { canvas, ctx, real, K, box: canvas.parentNode, cap: o.cap, name: o.name || 'Le héros', onSeen: o.onSeen, onDone: o.onDone, level, z: zoneIdx(level), tier: tierIdx(level),
       queue: buildQueue(level, target), ev: null, phase: 'walk', t: 0, time: 0, sx: 0, m: null, mx: 0, sparks: [], fx: [], hdodge: -9, hparry: -9, npc: null, enc: 0, talk: 0, said: [], stats: o.stats || null, parts: [], pt0: 0, n: 0, shake: 0, mflash: 0, hhit: -9, charge: 0, hits: 0, doneAt: 0 };
+    if (o.duel && !still) s.queue.unshift({ t: 'boss', m: o.duel, cb: o.onDuel });   // l'envie surmontée se rejoue en combat
     let last = performance.now();
     const loop = now => {
       if (st !== s || !canvas.isConnected) { if (st === s) stop(); return; }
@@ -1003,5 +1005,5 @@
     drawHero(11, 20, 2, tierIdx(level), 0, false, 0);
   }
 
-  window.RPG = { MAX, need, levelOf, streakMult, sessionXp, TIERS, ZONES, tierIdx, zoneIdx, buildQueue, start, stop, setMode, setBody: b => { BODY = b || 'ok'; }, portrait, tick: dt => { const s = st; if (s) { update(s, dt); if (st === s) draw(s); } } };
+  window.RPG = { MAX, need, levelOf, streakMult, sessionXp, TIERS, ZONES, tierIdx, zoneIdx, SMOKE: { n: 'Démon de fumée', l: 1, s: 'ghost', sc: 3, p: gh('#8a8f96', '#ff5d73', '#2a2a30'), fly: true, boss: true }, buildQueue, start, stop, setMode, setBody: b => { BODY = b || 'ok'; }, portrait, tick: dt => { const s = st; if (s) { update(s, dt); if (st === s) draw(s); } } };
 })();

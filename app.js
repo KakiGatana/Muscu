@@ -1,4 +1,4 @@
-/* Entraînement — carnet de muscu hors ligne (vanilla JS, aucune dépendance) */
+/* Solo Leveling — carnet de muscu hors ligne (vanilla JS, aucune dépendance) */
 (function () {
   'use strict';
   const KEY = 'fonte.v1', OLD_KEY = 'tandem.v1';
@@ -120,6 +120,7 @@
 
   /* ---------- rendu ---------- */
   function render() {
+    quitSync();
     const y = window.scrollY, v = top();
     let body;
     if (v) body = v.t === 'prog' ? progView(v) : v.t === 'edit' ? editView(v) : workView();
@@ -132,7 +133,7 @@
   }
   function header() {
     const d = new Date();
-    return `<header class="hdr"><div class="logo"><img src="icons/icon.svg" alt="" width="30" height="30"><b>Entraînement</b></div>
+    return `<header class="hdr"><div class="logo"><img src="icons/icon.svg" alt="" width="30" height="30"><b>Solo Leveling</b></div>
       <div class="row" style="gap:12px"><span class="date" style="display:none">${DAYS[(d.getDay() + 6) % 7].slice(0, 3)}. ${d.getDate()} ${MONTHS[d.getMonth()]}</span><button class="ic sm" data-act="tab" data-t="guide" aria-label="Guide">${svg('book')}</button><button class="ic sm" data-act="tab" data-t="more" aria-label="Réglages">${svg('gear')}</button></div></header>`;
   }
   function nav() {
@@ -168,7 +169,7 @@
     } else {
       hero = `<section class="hero rest"><div class="eyebrow">${DAYS[di]}</div><h1>${esc(day.l || 'Repos')}</h1>
         ${day.n ? `<p class="note">${esc(day.n)}</p>` : ''}
-        <p class="mut" style="font-size:13px;margin:4px 0 10px">Envie de t'entraîner quand même ?</p>
+        <p class="mut" style="font-size:13px;margin:4px 0 10px">Le planning est indicatif : choisis une séance si tu t'entraînes aujourd'hui.</p>
         <div class="chips">${S.programs.map(q => `<button class="chip btnchip" data-act="openProg" data-id="${q.id}">${esc(q.name)}</button>`).join('')}</div></section>`;
     }
     const last = S.logs[S.logs.length - 1];
@@ -345,19 +346,68 @@
   }
 
   /* ----- Aventure ----- */
-  const totalXp = () => S.logs.reduce((n, l) => n + (l.xp || 0), 0);
+  const totalXp = () => S.logs.reduce((n, l) => n + (l.xp || 0), 0) + ((S.quit && S.quit.xp) || 0);
   // série = jours d'entraînement consécutifs ; un jour de repos prévu au planning (ou une séance optionnelle) ne la casse pas
+  // série = séances enchaînées, sans tenir compte du planning. Un jour sans séance est toléré ;
+  // la série casse après deux jours sans séance d'affilée, ou si tu alternes (repos, séance, repos).
   function streakNow() {
-    const days = new Set(S.logs.map(logDay));
-    const planned = d => { const w = S.week[(d.getDay() + 6) % 7], p = w && w.p && S.programs.find(x => x.id === w.p); return !!p && !p.opt; };
-    const d = new Date(); let n = days.has(isoDay(d)) ? 1 : 0;
-    for (let i = 0; i < 120; i++) { d.setDate(d.getDate() - 1); if (days.has(isoDay(d))) n++; else if (planned(d)) break; }
+    const days = new Set(S.logs.map(logDay)), d = new Date();
+    let n = days.has(isoDay(d)) ? 1 : 0, lastRest = -9;   // aujourd'hui sans séance ne compte pas encore comme un repos
+    for (let i = 1; i < 400; i++) {
+      d.setDate(d.getDate() - 1);
+      if (days.has(isoDay(d))) { n++; continue; }
+      if (lastRest === i - 1 || lastRest === i - 2) break;
+      lastRest = i;
+    }
     return n;
+  }
+  /* ----- Sevrage (cigarette et vape) ----- */
+  const QMS = [[1, 20, '24 heures'], [3, 40, '3 jours'], [7, 80, '1 semaine'], [14, 100, '2 semaines'], [30, 200, '1 mois'], [90, 400, '3 mois'], [180, 600, '6 mois'], [365, 1000, '1 an']];
+  const QFACTS = ['Après 24 heures, le monoxyde de carbone a quitté ton sang et l\'oxygène circule mieux.', 'Vers 3 jours, la nicotine est éliminée. C\'est le pic du manque : à partir d\'ici, ça redescend.',
+    'En 2 à 12 semaines, la circulation et le souffle s\'améliorent : tu le sentiras sur tes sprints et tes séries longues.', 'Entre 1 et 9 mois, la toux et l\'essoufflement diminuent.', 'À 1 an, le sur-risque cardiaque lié au tabac est à peu près divisé par deux.'];
+  const quit = () => (S.quit = S.quit || { start: null, claimed: 0, xp: 0, best: 0, ms: [], slips: 0, crav: { d: '', n: 0 }, wins: 0, duel: false, cost: 0 });
+  const quitDays = () => { const q = quit(); return q.start ? Math.max(0, Math.floor((Date.now() - Date.parse(q.start)) / 864e5)) : 0; };
+  // crédite l'XP des jours tenus (10 par jour) et des paliers, une seule fois chacun
+  function quitSync() {
+    const q = quit(); if (!q.start) return;
+    const n = quitDays(); let ch = false;
+    if (n > q.claimed) { q.xp += (n - q.claimed) * 10; q.claimed = n; ch = true; }
+    QMS.forEach(m => { if (n >= m[0] && q.ms.indexOf(m[0]) < 0) { q.ms.push(m[0]); q.xp += m[1]; ch = true; } });
+    if (n > q.best) { q.best = n; ch = true; }
+    if (ch) save();
+  }
+  function quitCard() {
+    const q = quit();
+    if (!q.start) return `<div class="sect-h"><h2>Sevrage</h2></div><div class="card"><p style="font-size:14px;margin-bottom:6px"><b>Arrêt de la cigarette et de la vape.</b></p>
+      <p class="mut" style="font-size:13.5px;margin-bottom:12px">Chaque jour tenu rapporte 10 XP, chaque palier un bonus, et chaque envie surmontée devient un combat contre le Démon de fumée.${q.best ? ' Ton record : ' + q.best + ' jour' + (q.best > 1 ? 's' : '') + '.' : ''}</p>
+      <button class="btn pri xl" data-act="quitStart">${q.slips ? 'Reprendre le sevrage' : 'J\'arrête maintenant'}</button></div>`;
+    const ms = Date.now() - Date.parse(q.start), n = Math.floor(ms / 864e5), h = Math.floor(ms / 36e5) % 24, next = QMS.find(m => n < m[0]), prev = QMS.filter(m => n >= m[0]).pop();
+    const from = prev ? prev[0] : 0, pct = next ? Math.min(100, Math.round((ms / 864e5 - from) / (next[0] - from) * 100)) : 100;
+    const fact = QFACTS[n < 1 ? 0 : n < 3 ? 1 : n < 30 ? 2 : n < 270 ? 3 : 4];
+    return `<div class="sect-h"><h2>Sevrage</h2><span class="chip ok">${q.xp} XP gagnés</span></div>
+      <div class="card"><div class="row sp"><b class="bignum">${n}<small> j ${h} h sans fumer</small></b>${q.best > n ? `<span class="chip">record ${q.best} j</span>` : ''}</div>
+        <div class="xp"><i style="width:${pct}%"></i></div>
+        <p class="mut" style="font-size:12.5px">${next ? 'Prochain palier : ' + next[2] + ' · +' + next[1] + ' XP' : 'Tous les paliers sont franchis.'}${q.cost ? ' · ' + Math.round(ms / 864e5 * q.cost) + ' € économisés' : ''}</p>
+        <p class="note">${esc(fact)}</p>
+        <div class="g2"><button class="btn pri" data-act="quitCrave">J'ai une envie</button><button class="btn ghost" data-act="quitSlip">J'ai craqué</button></div>
+        <p class="mut" style="font-size:12px;margin-top:10px">${q.wins} envie${q.wins > 1 ? 's' : ''} surmontée${q.wins > 1 ? 's' : ''}. Besoin d'aide : Tabac Info Service au 39 89, ou ton médecin ou pharmacien pour des substituts.</p></div>`;
+  }
+  let craveT = 0;
+  function craveTick(end) {
+    clearInterval(craveT);
+    craveT = setInterval(() => {
+      const el = $('#crt'); if (!el) { clearInterval(craveT); return; }
+      const left = Math.max(0, (end - Date.now()) / 1000); el.textContent = mmss(Math.ceil(left));
+      const b = $('#crb'); if (b) b.style.width = (100 - left / 180 * 100) + '%';
+      const ph = Math.floor((Date.now() / 1000) % 10), br = $('#crbr'); if (br) br.textContent = ph < 4 ? 'Inspire par le nez…' : ph < 6 ? 'Bloque…' : 'Expire lentement…';
+      if (left <= 0) { clearInterval(craveT); const w = $('#crw'); if (w) w.hidden = false; const br2 = $('#crbr'); if (br2) br2.textContent = 'C\'est passé.'; }
+    }, 250);
   }
   function badges() {
     const maxSt = Math.max(0, ...S.logs.map(l => l.streak || 0)), spam = S.logs.filter(l => l.spam).length, full = S.logs.filter(l => l.full).length, rec = S.logs.reduce((n, l) => n + (l.rec || 0), 0);
     return [['Régulier', 'Série de 5 séances', maxSt >= 5], ['Inarrêtable', 'Série de 10 séances', maxSt >= 10], ['Sans faute', '10 séances complètes', full >= 10],
-      ['Briseur de records', '10 records battus', rec >= 10], ['Roi du spam', '5 séances spam', spam >= 5], ['Centurion', '100 séances', S.logs.length >= 100]];
+      ['Briseur de records', '10 records battus', rec >= 10], ['Roi du spam', '5 séances spam', spam >= 5], ['Centurion', '100 séances', S.logs.length >= 100],
+      ['Souffle retrouvé', '7 jours sans fumer', ((S.quit && S.quit.best) || 0) >= 7], ['Libéré', '30 jours sans fumer', ((S.quit && S.quit.best) || 0) >= 30], ['Poumons d\'acier', '100 jours sans fumer', ((S.quit && S.quit.best) || 0) >= 100]];
   }
   // niveau déjà montré à l'écran : montées de niveau, tenues, zones et boss attendent que l'Aventure soit ouverte
   function seenLvl(L) { return Math.max(1, Math.min(L, (S.adv && S.adv.seen) || 1)); }
@@ -369,7 +419,7 @@
     const now = new Date(), mon = new Date(now), last = S.logs[S.logs.length - 1]; mon.setDate(now.getDate() - (now.getDay() + 6) % 7); let did = 0;
     for (let i = 0; i < 7; i++) { const d = new Date(mon); d.setDate(mon.getDate() + i); if (S.logs.some(l => logDay(l) === isoDay(d))) did++; }
     const stats = { n: S.logs.length, streak: streakNow(), did, planned: S.week.filter(d => d.p).length, full: !!(last && last.full), spam: !!(last && last.spam), pdc: !!(last && last.pdc), body: bf.k, sets: last ? last.ex.reduce((n, e) => n + e.sets.length, 0) : 0, rec: (last && last.rec) || 0, days: last ? Math.floor((Date.now() - Date.parse(last.date)) / 864e5) : 0 };
-    RPG.start(c, { level: L, target: Lr, cap: $('#advcap'), name: S.name, real: S.opts.gfx === 'real', stats,
+    RPG.start(c, { level: L, target: Lr, cap: $('#advcap'), name: S.name, real: S.opts.gfx === 'real', stats, duel: quit().duel ? RPG.SMOKE : null, onDuel: () => { quit().duel = false; save(); },
       onSeen: l => { S.adv = { seen: l }; save(); },
       onDone: () => { if (V.tab === 'adv' && !top()) render(); } });
   }
@@ -388,6 +438,7 @@
       <div class="scene"><div class="hud"><b>NIV. ${L}</b><span>${esc(RPG.TIERS[ti].t)}</span><div class="xp"><i style="width:${Math.min(100, L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div></div>${pending ? '<button class="skip" data-act="advSkip">Passer</button>' : ''}<canvas id="adv" width="144" height="128"></canvas><div id="advcap" class="cap">${esc(S.name)} avance dans ${esc(RPG.ZONES[zi].n.toLowerCase())}.</div></div>
       <div class="card me"><canvas data-me class="px" width="40" height="48"></canvas><div class="grow"><div class="eyebrow">Niveau ${L}</div><h3>${esc(S.name)}, ${esc(RPG.TIERS[ti].t)}</h3>
         <div class="xp"><i style="width:${Math.min(100, L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div><p class="mut" style="font-size:12.5px">${pending ? 'Montée de niveau en cours…' : L >= RPG.MAX ? xp + ' XP · niveau maximum atteint' : (xp - xa) + ' / ' + (xb - xa) + ' XP · niveau ' + (L + 1) + ' dans ' + (xb - xp) + ' XP'}</p></div></div>
+      ${quitCard()}
       <div class="stats">
         <div class="stat"><b>${stk}</b><span>série en cours</span></div>
         <div class="stat"><b>×${fw(nextMult)}</b><span>prochaine séance</span></div>
@@ -396,7 +447,8 @@
       <details class="g"><summary>Comment gagner de l'XP</summary><ul>
         <li><b>3 XP</b> par série validée, <b>2 XP</b> par échauffement, <b>+15</b> si la séance est faite en entier, <b>+5</b> par record.</li>
         <li>Le total est multiplié par ta série : ×1 le premier jour, puis +0,25 par jour d'entraînement d'affilée, jusqu'à ×2,5.</li>
-        <li>Un jour de repos prévu au planning ne casse pas la série. Un jour de séance prévu et sauté la remet à zéro.</li>
+        <li>La série ne dépend pas du planning. Un jour sans séance est toléré ; elle casse après deux jours sans séance d'affilée, ou si tu alternes un jour sur deux (repos, séance, repos).</li>
+        <li>Sevrage : 10 XP par jour sans fumer, un bonus à chaque palier, 5 XP par envie surmontée.</li>
         <li>Les séances spam et poids du corps comptent comme les autres, pour l'XP comme pour la série de jours : ce sont les séries validées qui paient, et le bonus de séance complète s'applique au poids du corps.</li>
         <li>Niveau maximum : <b>100</b>. À rythme régulier (environ 4 séances par semaine), compte à peu près un an pour le niveau 50 et quatre ans pour le niveau 100.</li></ul></details>
       <div class="sect-h"><h2>Le voyage</h2></div>${zones}
@@ -540,7 +592,7 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
       <div class="card"><div class="eyebrow" style="margin-bottom:10px">Programme</div>
         <p class="mut" style="font-size:13px;margin-bottom:12px">Programme d'origine : v${esc(S.progV || '')}. Remettre les séances d'origine efface tes modifications de séances, jamais ton historique.</p>
         <button class="btn dng" style="width:100%" data-act="resetProgs">Remettre les séances d'origine</button></div>
-      <p class="mut" style="text-align:center;font-size:12px;margin-top:18px">Entraînement · fonctionne hors ligne</p>`;
+      <p class="mut" style="text-align:center;font-size:12px;margin-top:18px">Solo Leveling · fonctionne hors ligne</p>`;
   }
 
   /* ---------- feuilles / dialogues ---------- */
@@ -705,6 +757,34 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
     ['pdc_burpees', 'Burpees', '10', 60, 'Sans saut si le genou proteste', 'genou']
   ];
   const A = {
+    quitStart() {
+      const q = quit();
+      openSheet(`<h2>Sevrage</h2><p class="mut" style="margin-bottom:12px;font-size:13.5px">Le compteur démarre maintenant. Rechuter ne supprime jamais l'XP déjà gagné : tu repars, c'est tout.</p>
+        <label class="f"><span>Dépense par jour en tabac et vape (€, optionnel)</span><input class="fi" id="qc" inputmode="decimal" value="${q.cost || ''}" placeholder="ex. 8"></label>
+        <button class="btn pri xl" data-act="quitGo">Je commence</button>`);
+    },
+    quitGo() { const q = quit(), c = num($('#qc').value); q.cost = isNaN(c) ? 0 : c; q.start = new Date().toISOString(); q.claimed = 0; save(); closeSheet(); render(); toast('Sevrage commencé'); },
+    quitCrave() {
+      openSheet(`<div class="win"><div class="eyebrow">Une envie dure quelques minutes</div><h2 style="font-size:24px;margin:6px 0">Tiens 3 minutes</h2>
+        <div class="tm" style="margin:12px 0"><div class="bar"><i id="crb"></i></div><div class="t" id="crt" style="font-size:46px">3:00</div></div>
+        <p id="crbr" style="font-size:16px;font-weight:650;min-height:24px">Inspire par le nez…</p>
+        <p class="mut" style="font-size:13px;margin:10px 0 14px">Bois un verre d'eau, lève-toi, fais dix pompes ou dix squats. L'envie redescend toute seule.</p>
+        <div id="crw" hidden><button class="btn pri xl" data-act="quitWin">Envie surmontée</button></div>
+        <button class="btn ghost sm" style="margin-top:10px" data-act="sheetX">Fermer</button></div>`);
+      craveTick(Date.now() + 180000);
+    },
+    quitWin() {
+      const q = quit(), t = todayISO(); if (q.crav.d !== t) q.crav = { d: t, n: 0 };
+      const gain = q.crav.n < 6 ? 5 : 0; q.crav.n++; q.wins++; q.xp += gain; q.duel = true; save(); closeSheet(); setTab('adv');
+      toast(gain ? 'Envie surmontée · +5 XP' : 'Envie surmontée');
+    },
+    async quitSlip() {
+      if (!await ask('Noter une rechute ? Le compteur repart de zéro, ton XP et ton record restent.', 'Noter', false)) return;
+      const q = quit(); q.best = Math.max(q.best, quitDays()); q.slips++; q.start = null; q.claimed = 0; save(); render();
+      openSheet(`<h2>Ça arrive</h2><p style="font-size:14.5px;margin-bottom:10px">La plupart des gens qui ont arrêté pour de bon ont rechuté plusieurs fois avant. Une cigarette n'efface pas les jours tenus : ton record est de ${q.best} jour${q.best > 1 ? 's' : ''}, et tout l'XP gagné est conservé.</p>
+        <p class="mut" style="font-size:13.5px;margin-bottom:14px">Note ce qui a déclenché l'envie (stress, alcool, soirée, ennui) : c'est l'information la plus utile pour la prochaine tentative.</p>
+        <div class="g2"><button class="btn" data-act="sheetX">Plus tard</button><button class="btn pri" data-act="quitStart">Je repars maintenant</button></div>`);
+    },
     foodCam() { $('#cam').click(); },
     foodGal() { $('#gal').click(); },
     foodAdd() { foodSheet({}, null); },
@@ -837,7 +917,7 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
     export() {
       S.lastBackup = Date.now(); save();
       const blob = new Blob([JSON.stringify(S, null, 1)], { type: 'application/json' });
-      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `entrainement-sauvegarde-${todayISO()}.json`;
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `solo-leveling-sauvegarde-${todayISO()}.json`;
       document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000); toast('Sauvegarde exportée'); render();
     },
     importPick() { $('#imp').click(); },
