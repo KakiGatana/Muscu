@@ -390,7 +390,16 @@
         <p class="mut" style="font-size:12.5px">${next ? 'Prochain palier : ' + next[2] + ' · +' + next[1] + ' XP' : 'Tous les paliers sont franchis.'}${q.cost ? ' · ' + Math.round(ms / 864e5 * q.cost) + ' € économisés' : ''}</p>
         <p class="note">${esc(fact)}</p>
         <div class="g2"><button class="btn pri" data-act="quitCrave">J'ai une envie</button><button class="btn ghost" data-act="quitSlip">J'ai craqué</button></div>
+        ${riskTxt()}
         <p class="mut" style="font-size:12px;margin-top:10px">${q.wins} envie${q.wins > 1 ? 's' : ''} surmontée${q.wins > 1 ? 's' : ''}. Besoin d'aide : Tabac Info Service au 39 89, ou ton médecin ou pharmacien pour des substituts.</p></div>`;
+  }
+  const TRIGS = ['Stress', 'Ennui', 'Après un repas', 'Café', 'Alcool ou soirée', 'Fatigue', 'Quelqu\'un fume', 'Autre'];
+  let craveTrig = null;
+  const trigChips = () => `<p class="mut" style="font-size:12.5px;margin:12px 0 6px">Qu'est-ce qui l'a déclenchée ?</p><div class="chips trg">${TRIGS.map(t => `<button class="chip btnchip" data-act="quitTrig" data-v="${esc(t)}">${esc(t)}</button>`).join('')}</div>`;
+  function riskTxt() {
+    const q = quit(), tr = Object.entries(q.trig || {}).filter(e => e[1] > 0).sort((x, y) => y[1] - x[1]), hr = Object.entries(q.hrs || {}).sort((x, y) => y[1] - x[1]);
+    if (tr.reduce((n, e) => n + e[1], 0) + hr.reduce((n, e) => n + e[1], 0) < 3) return '';
+    return `<div class="why" style="margin-top:10px"><b style="color:var(--a2)">Tes moments à risque</b><p>${tr.length ? 'Déclencheurs : ' + tr.slice(0, 3).map(e => esc(e[0]) + ' (' + e[1] + ')').join(', ') + '. ' : ''}${hr.length ? 'Heures : surtout vers ' + hr.slice(0, 2).map(e => e[0] + ' h').join(' et ') + '.' : ''}</p><p class="mut">Prévois quelque chose à faire à ces moments-là avant que l'envie arrive.</p></div>`;
   }
   let craveT = 0;
   function craveTick(end) {
@@ -414,11 +423,12 @@
   function mountGame() {
     const Lr = RPG.levelOf(totalXp()), L = seenLvl(Lr), bf = bodyForm();
     RPG.setBody(bf.k);
+    const qq = quit(); RPG.setSmoke(qq.start ? Math.max(0, 1 - quitDays() / 30) : (qq.slips ? 1 : 0));
     document.querySelectorAll('canvas[data-me]').forEach(c => RPG.portrait(c, L));
     const c = $('#adv'); if (!c) { RPG.stop(); return; }
     const now = new Date(), mon = new Date(now), last = S.logs[S.logs.length - 1]; mon.setDate(now.getDate() - (now.getDay() + 6) % 7); let did = 0;
     for (let i = 0; i < 7; i++) { const d = new Date(mon); d.setDate(mon.getDate() + i); if (S.logs.some(l => logDay(l) === isoDay(d))) did++; }
-    const stats = { n: S.logs.length, streak: streakNow(), did, planned: S.week.filter(d => d.p).length, full: !!(last && last.full), spam: !!(last && last.spam), pdc: !!(last && last.pdc), body: bf.k, sets: last ? last.ex.reduce((n, e) => n + e.sets.length, 0) : 0, rec: (last && last.rec) || 0, days: last ? Math.floor((Date.now() - Date.parse(last.date)) / 864e5) : 0 };
+    const stats = { n: S.logs.length, streak: streakNow(), did, planned: S.week.filter(d => d.p).length, full: !!(last && last.full), spam: !!(last && last.spam), pdc: !!(last && last.pdc), body: bf.k, quit: { on: !!qq.start, days: quitDays(), wins: qq.wins, slips: qq.slips }, sets: last ? last.ex.reduce((n, e) => n + e.sets.length, 0) : 0, rec: (last && last.rec) || 0, days: last ? Math.floor((Date.now() - Date.parse(last.date)) / 864e5) : 0 };
     RPG.start(c, { level: L, target: Lr, cap: $('#advcap'), name: S.name, real: S.opts.gfx === 'real', stats, duel: quit().duel ? RPG.SMOKE : null, onDuel: () => { quit().duel = false; save(); },
       onSeen: l => { S.adv = { seen: l }; save(); },
       onDone: () => { if (V.tab === 'adv' && !top()) render(); } });
@@ -477,7 +487,7 @@
   }
   function foodView() {
     const N = nut(), t = dayTot(todayISO()), bf = bodyForm(), key = aiKey(), pct = (v, m) => Math.min(100, Math.round(v / m * 100));
-    const list = foods().filter(f => logDay(f) === todayISO()).reverse().map(f => `<div class="rk food">${f.img ? `<img src="${f.img}" alt="">` : '<div class="noimg"></div>'}<div class="grow"><b>${esc(f.n)}</b><div class="mut" style="font-size:12.5px">${f.kcal} kcal · ${f.p} g prot.${f.ai ? ' · estimé par IA' : ''}</div></div><button data-act="foodDel" data-id="${f.id}" class="mut" aria-label="Supprimer">${svg('trash')}</button></div>`).join('');
+    const list = foods().filter(f => logDay(f) === todayISO()).reverse().map(f => `<div class="rk food">${f.img ? `<img src="${f.img}" alt="">` : '<div class="noimg"></div>'}<button class="grow" style="text-align:left" data-act="foodEdit" data-id="${f.id}"><b>${esc(f.n)}</b><div class="mut" style="font-size:12.5px">${f.kcal} kcal · ${f.p} g prot.${f.ai ? ' · estimé par IA' : ''} · modifier</div></button><button data-act="foodDel" data-id="${f.id}" class="mut" aria-label="Supprimer">${svg('trash')}</button></div>`).join('');
     const d = new Date(); let week = '';
     for (let i = 1; i < 7; i++) { d.setDate(d.getDate() - 1); const x = dayTot(isoDay(d)); if (x.n) week += `<div class="rk"><span class="grow">${fdate(d.toISOString())}</span><span class="v">${x.kcal} kcal</span><span class="mut" style="font-family:var(--mono);font-size:13px">${Math.round(x.p)} g</span></div>`; }
     return `<div class="sect-h first"><h2>Repas</h2><span class="chip">${t.n} aujourd'hui</span></div>
@@ -495,8 +505,8 @@
       ${week ? `<div class="sect-h"><h2>Jours précédents</h2></div>${week}` : ''}`;
   }
   let pendFood = null;
-  function foodSheet(d, img, msg) {
-    pendFood = { img: img || '', ai: !!d.ai };
+  function foodSheet(d, img, msg, big, editId) {
+    pendFood = { img: img || '', ai: !!d.ai, big: big || '', prev: d, id: editId || '' };
     openSheet(`<h2>${img ? 'Ton repas' : 'Nouveau repas'}</h2>
       ${img ? `<img class="shot" src="${img}" alt="">` : ''}
       ${msg ? `<p class="note">${esc(msg)}</p>` : ''}
@@ -507,7 +517,9 @@
       <div class="g2"><label class="f"><span>Glucides (g)</span><input class="fi" id="fc" inputmode="decimal" value="${esc(d.glucides_g == null ? '' : d.glucides_g)}"></label>
       <label class="f"><span>Lipides (g)</span><input class="fi" id="fl" inputmode="decimal" value="${esc(d.lipides_g == null ? '' : d.lipides_g)}"></label></div>
       ${d.ai ? '<p class="mut" style="font-size:12.5px;margin-bottom:10px">Estimation à partir d\'une photo : l\'ordre de grandeur est fiable, pas le chiffre exact. Corrige si tu connais les quantités.</p>' : ''}
-      <button class="btn pri xl" data-act="foodSave">Enregistrer</button>`);
+      ${big && aiKey() ? `<label class="f"><span>Préciser ou corriger l'analyse</span><textarea class="fi" id="fx" rows="2" placeholder="ex. petite portion de frites, 6 falafels, sauce blanche à part"></textarea></label>
+      <button class="btn" style="width:100%;margin-bottom:10px" data-act="foodRe">Recalculer avec cette précision</button>` : ''}
+      <button class="btn pri xl" data-act="foodSave">${editId ? 'Mettre à jour' : 'Enregistrer'}</button>`);
   }
   // redimensionne la photo avant envoi (1024 px max) et fabrique une vignette pour la liste
   function shrink(file, max, q) {
@@ -518,7 +530,7 @@
       im.src = url;
     });
   }
-  async function analyzeFood(b64) {
+  async function analyzeFood(b64, note, prev) {
     const N = nut(), t = dayTot(todayISO()), w = S.body.slice().sort((a, b) => a.d.localeCompare(b.d)).pop();
     const body = {
       model: 'claude-opus-5-5', max_tokens: 16000, fallbacks: 'default',
@@ -535,8 +547,8 @@
 
 Profil : homme, ${N.h} cm, ${w ? fw(w.kg) : 85} kg, en phase de perte de gras avec maintien du muscle. Cibles du jour : ${N.kcal} kcal et ${N.prot} g de protéines. Déjà enregistré aujourd'hui avant cette photo : ${t.kcal} kcal et ${Math.round(t.p)} g de protéines.
 
-Estime les portions d'après ce qui est visible (taille de l'assiette, couverts, emballages, étiquettes lisibles). Donne toujours ta meilleure estimation chiffrée pour l'ensemble de ce qui est sur la photo, et indique ton niveau de confiance : « basse » quand la composition ou les quantités sont difficiles à voir (plat en sauce, aliments cachés, huile de cuisson invisible). « aliment » est un nom court en français. « commentaire » tient en une ou deux phrases, en le tutoyant : ce que ce repas apporte par rapport à ce qu'il lui reste à manger aujourd'hui, de façon factuelle et sans morale. Si la photo ne montre pas de nourriture ni de boisson, mets est_nourriture à false, les valeurs à 0, et dis-le dans le commentaire.`,
-      messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } }, { type: 'text', text: 'Voici la photo de ce que je mange.' }] }]
+Estime les portions d'après ce qui est visible (taille de l'assiette, couverts, emballages, étiquettes lisibles). Donne toujours ta meilleure estimation chiffrée pour l'ensemble de ce qui est sur la photo, et indique ton niveau de confiance : « basse » quand la composition ou les quantités sont difficiles à voir (plat en sauce, aliments cachés, huile de cuisson invisible). « aliment » est un nom court en français. « commentaire » tient en une ou deux phrases, en le tutoyant : ce que ce repas apporte par rapport à ce qu'il lui reste à manger aujourd'hui, de façon factuelle et sans morale. Quand l'utilisateur précise ou corrige (quantités, ingrédients, mode de cuisson, ce qu'il n'a pas mangé), ses indications priment sur ce que tu crois voir : refais l'estimation à partir d'elles et dis en une phrase ce que ça change. Si la photo ne montre pas de nourriture ni de boisson, mets est_nourriture à false, les valeurs à 0, et dis-le dans le commentaire.`,
+      messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } }, { type: 'text', text: note ? `Voici la photo de ce que je mange. Ta première estimation était : ${prev && prev.aliment ? prev.aliment : 'inconnu'}, ${prev && prev.kcal != null ? prev.kcal : '?'} kcal, ${prev && prev.proteines_g != null ? prev.proteines_g : '?'} g de protéines, ${prev && prev.glucides_g != null ? prev.glucides_g : '?'} g de glucides, ${prev && prev.lipides_g != null ? prev.lipides_g : '?'} g de lipides. Ma précision ou correction : ${note}` : 'Voici la photo de ce que je mange.' }] }]
     };
     let r;
     try {
@@ -557,10 +569,10 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
     if (!aiKey()) { foodSheet({}, thumb, 'Pas de clé API : la photo est gardée, saisis les valeurs à la main.'); return; }
     openSheet(`<h2>Analyse en cours</h2><img class="shot" src="${thumb}" alt=""><p class="mut">Estimation des calories et des protéines…</p><div class="xp busy"><i></i></div>`);
     try {
-      const d = await analyzeFood(big.split(',')[1]);
+      const b64 = big.split(',')[1], d = await analyzeFood(b64);
       if (!$('#sheet').classList.contains('show')) return;   // feuille fermée entre-temps
-      foodSheet(d, thumb, d.est_nourriture === false ? 'Aucune nourriture reconnue sur cette photo.' : '');
-    } catch (e) { foodSheet({}, thumb, e.message); }
+      foodSheet(d, thumb, d.est_nourriture === false ? 'Aucune nourriture reconnue sur cette photo.' : '', b64);
+    } catch (e) { foodSheet({}, thumb, e.message, big.split(',')[1]); }
   }
 
   /* ----- Guide ----- */
@@ -757,6 +769,13 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
     ['pdc_burpees', 'Burpees', '10', 60, 'Sans saut si le genou proteste', 'genou']
   ];
   const A = {
+    foodEdit(t) { const f = foods().find(x => x.id === t.dataset.id); if (f) foodSheet({ aliment: f.n, kcal: f.kcal, proteines_g: f.p, glucides_g: f.c, lipides_g: f.f }, f.img, '', '', f.id); },
+    async foodRe(t) {
+      const note = $('#fx').value.trim(), p = pendFood; if (!note) { toast('Écris ta précision d\'abord'); return; }
+      t.disabled = true; t.textContent = 'Recalcul en cours…';
+      try { const d = await analyzeFood(p.big, note, p.prev); if ($('#sheet').classList.contains('show')) foodSheet(d, p.img, '', p.big, p.id); }
+      catch (e) { t.disabled = false; t.textContent = 'Recalculer avec cette précision'; toast(e.message); }
+    },
     quitStart() {
       const q = quit();
       openSheet(`<h2>Sevrage</h2><p class="mut" style="margin-bottom:12px;font-size:13.5px">Le compteur démarre maintenant. Rechuter ne supprime jamais l'XP déjà gagné : tu repars, c'est tout.</p>
@@ -764,12 +783,20 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
         <button class="btn pri xl" data-act="quitGo">Je commence</button>`);
     },
     quitGo() { const q = quit(), c = num($('#qc').value); q.cost = isNaN(c) ? 0 : c; q.start = new Date().toISOString(); q.claimed = 0; save(); closeSheet(); render(); toast('Sevrage commencé'); },
+    quitTrig(t) {
+      const q = quit(); q.trig = q.trig || {};
+      if (craveTrig) q.trig[craveTrig] = Math.max(0, (q.trig[craveTrig] || 1) - 1);
+      craveTrig = t.dataset.v; q.trig[craveTrig] = (q.trig[craveTrig] || 0) + 1; save();
+      document.querySelectorAll('.trg .chip').forEach(c => c.classList.toggle('ok', c.dataset.v === craveTrig));
+    },
     quitCrave() {
+      { const q = quit(), h = new Date().getHours(); q.hrs = q.hrs || {}; q.hrs[h] = (q.hrs[h] || 0) + 1; craveTrig = null; save(); }
       openSheet(`<div class="win"><div class="eyebrow">Une envie dure quelques minutes</div><h2 style="font-size:24px;margin:6px 0">Tiens 3 minutes</h2>
         <div class="tm" style="margin:12px 0"><div class="bar"><i id="crb"></i></div><div class="t" id="crt" style="font-size:46px">3:00</div></div>
         <p id="crbr" style="font-size:16px;font-weight:650;min-height:24px">Inspire par le nez…</p>
         <p class="mut" style="font-size:13px;margin:10px 0 14px">Bois un verre d'eau, lève-toi, fais dix pompes ou dix squats. L'envie redescend toute seule.</p>
-        <div id="crw" hidden><button class="btn pri xl" data-act="quitWin">Envie surmontée</button></div>
+        ${trigChips()}
+        <div id="crw" hidden style="margin-top:14px"><button class="btn pri xl" data-act="quitWin">Envie surmontée</button></div>
         <button class="btn ghost sm" style="margin-top:10px" data-act="sheetX">Fermer</button></div>`);
       craveTick(Date.now() + 180000);
     },
@@ -780,9 +807,9 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
     },
     async quitSlip() {
       if (!await ask('Noter une rechute ? Le compteur repart de zéro, ton XP et ton record restent.', 'Noter', false)) return;
-      const q = quit(); q.best = Math.max(q.best, quitDays()); q.slips++; q.start = null; q.claimed = 0; save(); render();
+      const q = quit(), h = new Date().getHours(); q.best = Math.max(q.best, quitDays()); q.slips++; q.start = null; q.claimed = 0; q.hrs = q.hrs || {}; q.hrs[h] = (q.hrs[h] || 0) + 1; craveTrig = null; save(); render();
       openSheet(`<h2>Ça arrive</h2><p style="font-size:14.5px;margin-bottom:10px">La plupart des gens qui ont arrêté pour de bon ont rechuté plusieurs fois avant. Une cigarette n'efface pas les jours tenus : ton record est de ${q.best} jour${q.best > 1 ? 's' : ''}, et tout l'XP gagné est conservé.</p>
-        <p class="mut" style="font-size:13.5px;margin-bottom:14px">Note ce qui a déclenché l'envie (stress, alcool, soirée, ennui) : c'est l'information la plus utile pour la prochaine tentative.</p>
+        <p class="mut" style="font-size:13.5px">Note ce qui l'a déclenchée : c'est l'information la plus utile pour la prochaine tentative.</p>${trigChips()}<div style="height:14px"></div>
         <div class="g2"><button class="btn" data-act="sheetX">Plus tard</button><button class="btn pri" data-act="quitStart">Je repars maintenant</button></div>`);
     },
     foodCam() { $('#cam').click(); },
@@ -791,7 +818,8 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
     foodSave() {
       const kcal = Math.round(num($('#fk').value)); if (isNaN(kcal)) { toast('Entre les calories'); return; }
       const v = id => { const n = num($(id).value); return isNaN(n) ? 0 : Math.round(n); };
-      foods().push({ id: uid(), date: new Date().toISOString(), n: $('#fn').value.trim() || 'Repas', kcal, p: v('#fp'), c: v('#fc'), f: v('#fl'), img: (pendFood && pendFood.img) || '', ai: !!(pendFood && pendFood.ai) });
+      const old = pendFood && pendFood.id && foods().find(f => f.id === pendFood.id), vals = { n: $('#fn').value.trim() || 'Repas', kcal, p: v('#fp'), c: v('#fc'), f: v('#fl') };
+      if (old) Object.assign(old, vals); else foods().push(Object.assign({ id: uid(), date: new Date().toISOString(), img: (pendFood && pendFood.img) || '', ai: !!(pendFood && pendFood.ai) }, vals));
       const fs = foods(); fs.forEach((f, i) => { if (i < fs.length - 40) f.img = ''; });   // on ne garde que les 40 dernières vignettes
       pendFood = null; save(); closeSheet(); render(); toast('Repas enregistré');
     },

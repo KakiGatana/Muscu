@@ -138,7 +138,7 @@
   const HB = ['...hhhh...', '..hhhhhh..', '..hsssss..', '..hssese..', '..ssssss..', '...tttt...', '.atttttta.', '.atttttta.', '.sbbbbbbs.', '..pppppp..'];
   const LEGS = [['..pp..pp..', '..pp..pp..', '..oo..ooo.'], ['..pppppp..', '...pppp...', '...oooo...']];
   // silhouette selon l'alimentation : ok, fat (alourdi), thin (sous-alimenté), fit / peak (affûté)
-  let BODY = 'ok';
+  let BODY = 'ok', SMK = 0;   // SMK : nuage de fumée autour du héros (1 = épais, 0 = dissipé), il s'efface au fil du sevrage
   const BROWS = { fat: ['...tttt...', '.atttttttt', '.atttttttt', '.sbbbbbbbb'], thin: ['...tttt...', '..atttta..', '..atttta..', '..sbbbbs..'], fit: ['..tttttt..', 'aattttttaa', '.atttttta.', '.sbbbbbbs.'] };
   const bodyRows = () => { const b = BROWS[BODY === 'peak' ? 'fit' : BODY]; return b ? HB.slice(0, 5).concat(b, HB.slice(9)) : HB; };
   const SKIN = '#e8b98a', EYE = '#2a1c12', RB = ['#ff7ad9', '#ffd76a', '#6fe3ff', '#b388ff', '#fff'];
@@ -169,6 +169,7 @@
   }
   function drawHero(x, y, sc, tier, frame, atk, t) {
     const P = HP[tier], w = P.w, hx = x + 9 * sc, f2 = Math.floor(t * 4) % 2;
+    if (SMK > 0) { g.globalAlpha = .55; for (let k = 0; k < Math.ceil(SMK * 9); k++) { const r = (t * (3 + hash(k) * 3) + hash(k + 4) * 9) % 9; R(k % 2 ? '#8a8f96' : '#6b6f76', x + (1 + hash(k + 1) * 8 + Math.sin(t * 2 + k) * 1.2) * sc, y + (3 - r) * sc, sc, sc); } g.globalAlpha = 1; }
     if (P.aura) for (let k = 0; k < 9; k++) { const n = k + Math.floor(t * 5) * 13; R(P.aura === 'rb' ? RB[(k + Math.floor(t * 5)) % RB.length] : P.aura, x - 3 * sc + hash(n) * 16 * sc, y - 3 * sc + hash(n + 5) * 16 * sc, sc / 2, sc / 2); }
     if (P.wings) { R(P.wings, x - 3 * sc, y + (2 - f2) * sc, 3 * sc, sc); R(P.wings, x - 5 * sc, y + (3 - f2) * sc, 5 * sc, sc); R(P.wings, x - 4 * sc, y + (4 - f2) * sc, 4 * sc, sc); R(P.wings, x - 3 * sc, y + (5 - f2) * sc, 3 * sc, sc); R(P.wings, x - 2 * sc, y + (6 - f2) * sc, 2 * sc, sc); }
     if (P.cape) { R(P.cape, x + sc, y + 5 * sc, sc, 6 * sc); R(P.cape, x, y + 7 * sc, sc, (frame ? 4 : 5) * sc); }
@@ -558,6 +559,13 @@
     else if (t.pdc) out.push('Pas de salle, pas d\'excuse : tu t\'es entraîné au poids du corps. Respect.', 'Ton propre poids comme seule charge. Les anciens chasseurs ne faisaient pas autrement.');
     else out.push('Tu as écourté ta dernière séance, non ? Le prochain boss ne te fera pas ce cadeau.', 'Séance incomplète la dernière fois. Ça arrive. Deux fois de suite, c\'est un choix.');
     if (t.sets >= 20) out.push(t.sets + ' séries à ta dernière séance. Tu ne fais pas semblant.');
+    const Q = t.quit;
+    if (Q && Q.on && Q.days >= 30) out.push(Q.days + ' jours sans fumer. Le nuage qui te suivait a disparu, et tu ne t\'essouffles plus au combat.');
+    else if (Q && Q.on && Q.days >= 7) out.push(Q.days + ' jours sans fumer, à ce qu\'on dit. La fumée autour de toi s\'éclaircit de jour en jour.');
+    else if (Q && Q.on && Q.days >= 1) out.push('Tu as arrêté de fumer depuis ' + Q.days + ' jour' + (Q.days > 1 ? 's' : '') + '. Les premiers sont les plus durs : tiens bon.');
+    else if (Q && Q.on) out.push('Premier jour sans fumer ? C\'est le combat le plus dur de ce monde. Je parie sur toi.');
+    else if (Q && Q.slips) out.push('Le Démon de fumée t\'a repris, je le vois au nuage qui te suit. Il a perdu ' + Q.wins + ' fois contre toi : retourne le chercher.');
+    if (Q && Q.on && Q.wins >= 3) out.push(Q.wins + ' envies repoussées. Le Démon de fumée commence à te craindre.');
     if (t.body === 'fat') out.push('Tu as pris du ventre, chasseur. Ce que tu manges pèse plus lourd que ce que tu soulèves, ces jours-ci.');
     if (t.body === 'thin') out.push('Tu flottes dans ta tenue. On ne gagne pas un combat le ventre vide : mange.');
     if (t.body === 'fit' || t.body === 'peak') out.push('Tu t\'es affûté. Ça se voit : tu manges comme quelqu\'un qui sait où il va.');
@@ -729,6 +737,7 @@
     const line = (x1, y1, x2, y2) => { g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); };
     g.lineCap = 'round'; g.lineJoin = 'round';
     g.fillStyle = 'rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(cx, fy + .6, 8, 1.6, 0, 0, 7); g.fill();
+    if (SMK > 0) for (let k = 0; k < Math.ceil(SMK * 7); k++) { const r = (T * (2 + hash(k) * 2) + hash(k + 4) * 14) % 14; g.fillStyle = `rgba(150,154,162,${(.3 * SMK * (1 - r / 14)).toFixed(3)})`; g.beginPath(); g.arc(cx - 6 + hash(k + 1) * 12 + Math.sin(T * 1.5 + k) * 2, hdY + 4 - r, 2.2 + r * .22, 0, 7); g.fill(); }
     if (P.aura) { const c = P.aura === 'rb' ? RB[Math.floor(T * 3) % RB.length] : P.aura, gr = g.createRadialGradient(cx, fy - 14, 2, cx, fy - 14, 21); gr.addColorStop(0, rgba(c, .5)); gr.addColorStop(1, rgba(c, 0)); g.fillStyle = gr; g.fillRect(cx - 22, fy - 36, 44, 40); }
     if (P.wings) { const fl = Math.sin(T * 4) * 2; g.fillStyle = rgba(P.wings, .88); [0, 4].forEach((o, i) => { g.beginPath(); g.moveTo(cx - 2, shY + 2 + o); g.quadraticCurveTo(cx - 12, shY - 13 - fl + o * 1.5, cx - 21 + i * 4, shY - 4 - fl + o); g.quadraticCurveTo(cx - 12, shY + 2 + o, cx - 3, shY + 7 + o); g.fill(); }); }
     const cp = P.cape || P.scarf;
@@ -1005,5 +1014,5 @@
     drawHero(11, 20, 2, tierIdx(level), 0, false, 0);
   }
 
-  window.RPG = { MAX, need, levelOf, streakMult, sessionXp, TIERS, ZONES, tierIdx, zoneIdx, SMOKE: { n: 'Démon de fumée', l: 1, s: 'ghost', sc: 3, p: gh('#8a8f96', '#ff5d73', '#2a2a30'), fly: true, boss: true }, buildQueue, start, stop, setMode, setBody: b => { BODY = b || 'ok'; }, portrait, tick: dt => { const s = st; if (s) { update(s, dt); if (st === s) draw(s); } } };
+  window.RPG = { MAX, need, levelOf, streakMult, sessionXp, TIERS, ZONES, tierIdx, zoneIdx, SMOKE: { n: 'Démon de fumée', l: 1, s: 'ghost', sc: 3, p: gh('#8a8f96', '#ff5d73', '#2a2a30'), fly: true, boss: true }, buildQueue, start, stop, setMode, setBody: b => { BODY = b || 'ok'; }, setSmoke: v => { SMK = Math.max(0, Math.min(1, +v || 0)); }, portrait, tick: dt => { const s = st; if (s) { update(s, dt); if (st === s) draw(s); } } };
 })();
