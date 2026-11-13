@@ -183,7 +183,8 @@
     const adv = `<button class="card advstrip" data-act="tab" data-t="adv"><canvas data-me class="px" width="40" height="48"></canvas>
       <div class="grow"><div class="eyebrow">Niveau ${L} · ${RPG.TIERS[RPG.tierIdx(L)].t}</div><div class="xp"><i style="width:${Math.min(100, L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div>
       <p class="mut">${pending ? '<b class="pend">Niveau supérieur ! Ouvre l\'aventure</b>' : L >= RPG.MAX ? 'Niveau maximum' : (xp - xa) + ' / ' + (xb - xa) + ' XP'}${stk > 1 ? ' · série de ' + stk : ''}</p></div>${svg('go', 'go')}</button>`;
-    return `${hero}${spamBtn}${adv}${nudge}
+    const nt = dayTot(todayISO()), snk = `<button class="card snackstrip" data-act="tab" data-t="food"><div class="grow"><div class="eyebrow">Fringale ?</div><p>Un verre d'eau, 10 minutes, puis un snack prévu. Il te reste ${Math.max(0, nut().kcal - nt.kcal)} kcal aujourd'hui.</p></div>${svg('go', 'go')}</button>`;
+    return `${hero}${spamBtn}${adv}${snk}${nudge}
       <div class="sect-h"><h2>La semaine</h2><button class="btn sm ghost" data-act="weekEdit">${svg('edit')}Modifier</button></div>
       <div class="week">${wk}</div>
       <div class="stats">
@@ -447,7 +448,7 @@
     const tiers = RPG.TIERS.map((t, i) => `<div class="rk"><div class="grow"><b>${L >= t.l ? esc(t.t) : '???'}</b><div class="mut" style="font-size:12.5px">${L >= t.l ? esc(t.g) : 'Se débloque au niveau ' + t.l}</div></div>${i === ti ? '<span class="tagc">Actuel</span>' : ''}</div>`).join('');
     const bd = badges().map(b => `<div class="rk"><div class="grow"><b class="${b[2] ? '' : 'mut'}">${b[0]}</b><div class="mut" style="font-size:12.5px">${b[1]}</div></div>${b[2] ? '<span class="chip ok">Obtenu</span>' : ''}</div>`).join('');
     return `<div class="sect-h first"><h2>Aventure</h2><button class="btn sm ghost" data-act="gfx">Style : ${S.opts.gfx === 'real' ? 'Réaliste' : 'Pixel'}</button></div>
-      <div class="scene"><div class="hud"><b>NIV. ${L}</b><span>${esc(RPG.TIERS[ti].t)}</span><div class="xp"><i style="width:${Math.min(100, L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div></div>${pending ? '<button class="skip" data-act="advSkip">Passer</button>' : ''}<canvas id="adv" width="144" height="128"></canvas><div id="advcap" class="cap">${esc(S.name)} avance dans ${esc(RPG.ZONES[zi].n.toLowerCase())}.</div></div>
+      <div class="scene"><div class="hud"><b>NIV. ${L}</b><span>${esc(RPG.TIERS[ti].t)}</span><div class="xp"><i style="width:${Math.min(100, L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div><div class="hp"><i style="width:100%"></i></div><small class="hpt">PV</small></div>${pending ? '<button class="skip" data-act="advSkip">Passer</button>' : ''}<canvas id="adv" width="144" height="128"></canvas><div id="advcap" class="cap">${esc(S.name)} avance dans ${esc(RPG.ZONES[zi].n.toLowerCase())}.</div></div>
       <div class="card me"><canvas data-me class="px" width="40" height="48"></canvas><div class="grow"><div class="eyebrow">Niveau ${L}</div><h3>${esc(S.name)}, ${esc(RPG.TIERS[ti].t)}</h3>
         <div class="xp"><i style="width:${Math.min(100, L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div><p class="mut" style="font-size:12.5px">${pending ? 'Montée de niveau en cours…' : L >= RPG.MAX ? xp + ' XP · niveau maximum atteint' : (xp - xa) + ' / ' + (xb - xa) + ' XP · niveau ' + (L + 1) + ' dans ' + (xb - xp) + ' XP'}</p></div></div>
       ${quitCard()}
@@ -501,10 +502,37 @@
       <div class="g2" style="margin:10px 0 12px"><button class="btn" data-act="foodGal">Depuis la galerie</button><button class="btn" data-act="foodAdd">Saisir à la main</button></div>
       <input type="file" id="cam" accept="image/*" capture="environment" hidden><input type="file" id="gal" accept="image/*" hidden>
       ${key ? '' : `<div class="card nudge"><div><b>Analyse par IA désactivée</b><p class="mut">Ajoute ta clé API dans les réglages pour que la photo soit analysée. Sans clé, tu peux saisir les valeurs à la main.</p></div><button class="btn sm" data-act="tab" data-t="more">Réglages</button></div>`}
+      ${snackCard(N, t)}
+      <div class="sect-h"><h2>Aujourd'hui</h2></div>
       ${list || '<div class="card empty">Rien d\'enregistré aujourd\'hui.</div>'}
       <div class="sect-h"><h2>Forme du personnage</h2><span class="chip ${bf.k === 'fit' || bf.k === 'peak' ? 'ok' : bf.k === 'ok' ? '' : 'warn'}">${bf.label}</span></div>
       <div class="card me"><canvas data-me class="px" width="40" height="48"></canvas><p class="grow" style="font-size:13.5px">${esc(bf.txt)}</p></div>
       ${week ? `<div class="sect-h"><h2>Jours précédents</h2></div>${week}` : ''}`;
+  }
+  // snacks de sèche (tirés de ton programme) : nom, portion, kcal, protéines, astuce
+  const SNACKS = [
+    ['Skyr ou fromage blanc 0 %', '150 g', 90, 15, 'Avec cacao non sucré, cannelle ou fruits rouges : ça devient un dessert'],
+    ['Shaker de whey', '30 g', 120, 24, 'Le plus efficace contre une fringale sucrée de fin d\'après-midi'],
+    ['Thon au naturel', '1 boîte', 110, 25, ''], ['Blanc de dinde ou jambon blanc', '2 tranches', 60, 12, ''],
+    ['Pop-corn nature maison', '30 g', 120, 3, 'Sans huile. Énorme volume, idéal devant un écran'], ['Clémentines', '3', 110, 2, 'Occupe les mains et le temps'],
+    ['Crudités + dip de fromage blanc', 'à volonté', 50, 4, ''], ['Cornichons', 'à volonté', 10, 0, 'Pour l\'envie de salé'],
+    ['Chocolat noir 85 %', '2 carrés', 60, 1, 'Le goût intense suffit'], ['Compote sans sucre ajouté', '1 gourde', 55, 0, ''], ['Fruits rouges surgelés', '1 poignée', 40, 1, 'Dans le skyr = vrai dessert']
+  ];
+  function snackCard(N, t) {
+    const rest = N.kcal - t.kcal, pr = N.prot - t.p;
+    const order = SNACKS.map((s, i) => [s, i]).sort((x, y) => pr > 25 ? y[0][3] - x[0][3] : x[0][2] - y[0][2]);
+    const advice = rest <= 0 ? 'Tu as atteint ta cible de calories. Si la faim est là : cornichons, crudités, thé ou eau pétillante.'
+      : pr > 25 ? `Il te reste ${rest} kcal et ${Math.round(pr)} g de protéines : prends un snack protéiné, il cale beaucoup mieux.`
+      : `Il te reste ${rest} kcal et tes protéines sont presque faites : choisis ce qui te fait plaisir dans la liste.`;
+    return `<div class="sect-h"><h2>Fringale ?</h2><span class="chip ${rest < 0 ? 'warn' : ''}">${rest >= 0 ? 'reste ' + rest : '+' + (-rest)} kcal</span></div>
+      <div class="card snack"><p class="big">Un grand verre d'eau ou un thé, puis 10 minutes.</p>
+        <p class="mut">Une bonne partie des fringales du soir, c'est de l'ennui ou de la soif. Si la faim est toujours là, prends un snack prévu, sorti en portion. Jamais le paquet à portée de main.</p>
+        <p class="note">${esc(advice)}</p>
+        <div class="eyebrow" style="margin:12px 0 8px">Touche un snack pour l'ajouter à ta journée</div>
+        <div class="sgrid">${order.map(([s, i]) => `<button class="${s[2] > rest && rest > 0 ? 'over' : ''}" data-act="snackAdd" data-i="${i}"><b>${esc(s[0])}</b><span>${esc(s[1])} · ${s[2]} kcal${s[3] >= 10 ? ' · ' + s[3] + ' g prot.' : ''}</span>${s[4] ? `<small>${esc(s[4])}</small>` : ''}</button>`).join('')}</div>
+        <div class="why" style="margin-top:12px"><b style="color:#ffb07a">Les pièges</b>
+          <p>Amandes et noix : 30 g = 180 kcal. Sain mais très dense, à pré-portionner.</p><p>Billes de chocolat et formats en vrac : n'en aie pas chez toi. L'environnement bat la discipline.</p><p>Sodas, sirops, alcool : beaucoup de calories, aucune satiété.</p>
+          <p class="mut">200 à 250 kcal de snack par jour entrent dans tes ${N.kcal} sans problème. Ce qui ruine une sèche, c'est le grignotage non compté.</p></div></div>`;
   }
   let pendFood = null;
   function foodSheet(d, img, msg, big, editId) {
@@ -771,6 +799,7 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
     ['pdc_burpees', 'Burpees', '10', 60, 'Sans saut si le genou proteste', 'genou']
   ];
   const A = {
+    snackAdd(t) { const s = SNACKS[+t.dataset.i]; foods().push({ id: uid(), date: new Date().toISOString(), n: s[0], kcal: s[2], p: s[3], c: 0, f: 0, img: '', ai: false }); save(); render(); toast(s[0] + ' ajouté · ' + s[2] + ' kcal'); },
     foodEdit(t) { const f = foods().find(x => x.id === t.dataset.id); if (f) foodSheet({ aliment: f.n, kcal: f.kcal, proteines_g: f.p, glucides_g: f.c, lipides_g: f.f }, f.img, '', '', f.id); },
     async foodRe(t) {
       const note = $('#fx').value.trim(), p = pendFood; if (!note) { toast('Écris ta précision d\'abord'); return; }

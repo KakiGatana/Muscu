@@ -598,6 +598,11 @@
   }
   function update(s, dt) {
     s.time += dt; s.t += dt;
+    // barre de vie (décorative) : baisse à chaque coup reçu, tombe à zéro en cas de défaite, remonte en marchant
+    if (s.hhit > s.lastHit && s.time >= s.hhit) { s.lastHit = s.hhit; s.hp = Math.max(.06, s.hp - (s.win ? .1 : .32)); }
+    if (s.phase === 'lose') s.hp = s.t > 2.7 ? Math.min(1, (s.t - 2.7) / .7) : 0;
+    else if (s.phase !== 'fight' && s.phase !== 'approach') s.hp = Math.min(1, s.hp + dt * .1);
+    { const v = Math.round(s.hp * 100); if (v !== s.hpShown && s.box && s.box.isConnected) { s.hpShown = v; const b = s.box.querySelector('.hp i'), tx = s.box.querySelector('.hpt'), mx = 100 + s.level * 10; if (b) { b.style.width = v + '%'; b.parentNode.classList.toggle('low', v < 30); } if (tx) tx.textContent = 'PV ' + Math.round(mx * s.hp) + ' / ' + mx; } }
     const m = s.m, e = s.ev;
     if (s.phase === 'walk') {
       s.sx += 26 * dt;
@@ -996,7 +1001,7 @@
     const still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (still && target > level) { level = target; if (o.onSeen) o.onSeen(target); }   // sans animations : on acte directement
     const s = st = { canvas, ctx, real, K, box: canvas.parentNode, cap: o.cap, name: o.name || 'Le héros', onSeen: o.onSeen, onDone: o.onDone, level, z: zoneIdx(level), tier: tierIdx(level),
-      queue: buildQueue(level, target), ev: null, phase: 'walk', t: 0, time: 0, sx: 0, m: null, mx: 0, sparks: [], fx: [], hdodge: -9, hparry: -9, npc: null, enc: 0, talk: 0, said: [], stats: o.stats || null, parts: [], pt0: 0, n: 0, shake: 0, mflash: 0, hhit: -9, charge: 0, hits: 0, doneAt: 0 };
+      queue: buildQueue(level, target), ev: null, phase: 'walk', t: 0, time: 0, sx: 0, m: null, mx: 0, sparks: [], fx: [], hp: 1, lastHit: -9, hpShown: -1, hdodge: -9, hparry: -9, npc: null, enc: 0, talk: 0, said: [], stats: o.stats || null, parts: [], pt0: 0, n: 0, shake: 0, mflash: 0, hhit: -9, charge: 0, hits: 0, doneAt: 0 };
     if (o.duel && !still) s.queue.unshift({ t: 'boss', m: o.duel, cb: o.onDuel });   // l'envie surmontée se rejoue en combat
     let last = performance.now();
     const loop = now => {

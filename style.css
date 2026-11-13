@@ -348,3 +348,18 @@ details.hist li{padding:6px 0;border-top:1px solid var(--line);margin:0}
 .trg{display:flex;flex-wrap:wrap;gap:6px;justify-content:center}
 .trg .chip{padding:6px 10px;font-size:12.5px}
 textarea.fi{resize:vertical;font-family:inherit}
+
+/* barre de vie, snacks */
+.hud .hp{height:6px;margin-top:5px;border-radius:2px;background:#1a070b;border:1px solid rgba(73,224,179,.5);overflow:hidden}
+.hud .hp i{display:block;height:100%;background:linear-gradient(90deg,#2fbf8f,#7ff0c8);box-shadow:0 0 8px #49e0b3;transition:width .25s}
+.hud .hp.low{border-color:rgba(255,93,115,.7)}.hud .hp.low i{background:linear-gradient(90deg,#ff5d73,#ffb07a);box-shadow:0 0 8px #ff5d73}
+.hud .hpt{display:block;font-size:9.5px;letter-spacing:.1em;color:var(--mut);margin-top:3px}
+.snack{border-color:#ffb07a;box-shadow:0 0 18px rgba(255,150,90,.25),inset 0 0 22px rgba(255,150,90,.05)}
+.snack .big{font-size:20px;font-weight:800;line-height:1.25;margin-bottom:8px;color:#fff;text-shadow:0 0 14px rgba(255,150,90,.5)}
+.snack .mut{font-size:13.5px}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sgrid button{text-align:left;padding:10px 11px;border-radius:5px;border:1px solid var(--line2);background:rgba(18,28,51,.9);display:flex;flex-direction:column;gap:2px}
+.sgrid b{font-size:13.5px;line-height:1.2}.sgrid span{font-family:var(--mono);font-size:11.5px;color:var(--a2)}.sgrid small{font-size:11.5px;color:var(--mut);line-height:1.25}
+.sgrid .over{opacity:.5}
+.snackstrip{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border-color:rgba(255,150,90,.6)}
+.snackstrip .eyebrow{color:#ffb07a}.snackstrip p{font-size:13px;margin-top:3px}.snackstrip .go{width:18px;height:18px;opacity:.5;flex:none}
