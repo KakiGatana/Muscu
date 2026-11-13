@@ -612,6 +612,7 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
 
   /* ----- Réglages ----- */
   function moreView() {
+    setTimeout(() => { try { caches.keys().then(k => { const el = $('#appv'), v = k.filter(x => /^fonte-v/.test(x)).map(x => +x.slice(7)).sort((x, y) => y - x)[0]; if (el) el.textContent = v ? String(v) : 'inconnue'; }); } catch (e) { } }, 0);
     setTimeout(() => { try { if (navigator.storage && navigator.storage.persisted) navigator.storage.persisted().then(p => { const el = $('#persist'); if (el) el.textContent = p ? 'Stockage protégé par le navigateur.' : 'Stockage non protégé : exporte régulièrement une sauvegarde.'; }); } catch (e) { } }, 0);
     return `<div class="sect-h first"><h2>Réglages</h2></div>
       <div class="card"><label class="f"><span>Prénom</span><input class="fi" data-name value="${esc(S.name)}"></label>
@@ -634,6 +635,9 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
       <div class="card"><div class="eyebrow" style="margin-bottom:10px">Programme</div>
         <p class="mut" style="font-size:13px;margin-bottom:12px">Programme d'origine : v${esc(S.progV || '')}. Remettre les séances d'origine efface tes modifications de séances, jamais ton historique.</p>
         <button class="btn dng" style="width:100%" data-act="resetProgs">Remettre les séances d'origine</button></div>
+      <div class="card"><div class="eyebrow" style="margin-bottom:6px">Mise à jour</div>
+        <p class="mut" style="font-size:13px;margin-bottom:12px">Version installée : <b id="appv">…</b>. L'app vérifie les mises à jour à chaque réouverture.</p>
+        <div class="g2"><button class="btn" data-act="updCheck">Rechercher</button><button class="btn" data-act="updForce">Forcer le rechargement</button></div></div>
       <p class="mut" style="text-align:center;font-size:12px;margin-top:18px">Solo Leveling · fonctionne hors ligne</p>`;
   }
 
@@ -798,7 +802,20 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
     ['pdc_climbers', 'Mountain climbers', '30 s', 45, ''],
     ['pdc_burpees', 'Burpees', '10', 60, 'Sans saut si le genou proteste', 'genou']
   ];
+  let swReg = null;
   const A = {
+    async updCheck() {
+      if (!swReg) { toast('Mises à jour indisponibles dans ce navigateur'); return; }
+      toast('Recherche en cours…');
+      try { await swReg.update(); } catch (e) { toast('Pas de réseau'); return; }
+      setTimeout(() => { if (swReg.waiting) { $('#banner').hidden = false; $('#reload').onclick = () => swReg.waiting ? swReg.waiting.postMessage('SKIP_WAITING') : location.reload(); toast('Mise à jour trouvée'); } else toast(swReg.installing ? 'Téléchargement de la mise à jour…' : 'Tu as la dernière version'); }, 1500);
+    },
+    async updForce() {
+      if (!await ask('Recharger l\'app depuis le serveur ? Tes données sont conservées. Il faut du réseau.', 'Recharger', false)) return;
+      save();
+      try { const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r => r.unregister())); const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } catch (e) { }
+      location.reload();
+    },
     snackAdd(t) { const s = SNACKS[+t.dataset.i]; foods().push({ id: uid(), date: new Date().toISOString(), n: s[0], kcal: s[2], p: s[3], c: 0, f: 0, img: '', ai: false }); save(); render(); toast(s[0] + ' ajouté · ' + s[2] + ' kcal'); },
     foodEdit(t) { const f = foods().find(x => x.id === t.dataset.id); if (f) foodSheet({ aliment: f.n, kcal: f.kcal, proteines_g: f.p, glucides_g: f.c, lipides_g: f.f }, f.img, '', '', f.id); },
     async foodRe(t) {
@@ -1039,6 +1056,7 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
       $('#reload').onclick = () => { if (reg.waiting) reg.waiting.postMessage('SKIP_WAITING'); else location.reload(); };
     };
     navigator.serviceWorker.register('sw.js').then(reg => {
+      swReg = reg;
       if (reg.waiting && navigator.serviceWorker.controller) showBanner(reg);
       reg.addEventListener('updatefound', () => {
         const nw = reg.installing;
