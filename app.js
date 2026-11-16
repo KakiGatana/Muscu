@@ -602,8 +602,11 @@
       <div class="g2"><label class="f"><span>Glucides (g)</span><input class="fi" id="fc" inputmode="decimal" value="${esc(d.glucides_g == null ? '' : d.glucides_g)}"></label>
       <label class="f"><span>Lipides (g)</span><input class="fi" id="fl" inputmode="decimal" value="${esc(d.lipides_g == null ? '' : d.lipides_g)}"></label></div>
       ${d.ai ? '<p class="mut" style="font-size:12.5px;margin-bottom:10px">Estimation à partir d\'une photo : l\'ordre de grandeur est fiable, pas le chiffre exact. Corrige si tu connais les quantités.</p>' : ''}
-      ${big && aiKey() ? `<label class="f"><span>Préciser ou corriger l'analyse</span><textarea class="fi" id="fx" rows="2" placeholder="ex. petite portion de frites, 6 falafels, sauce blanche à part"></textarea></label>
-      <button class="btn" style="width:100%;margin-bottom:10px" data-act="foodRe">Recalculer avec cette précision</button>` : ''}
+      ${aiKey() ? (big ? `<label class="f"><span>Préciser ou corriger l'analyse</span><textarea class="fi" id="fx" rows="2" placeholder="ex. petite portion de frites, 6 falafels, sauce blanche à part"></textarea></label>
+      <button class="btn" style="width:100%;margin-bottom:10px" data-act="foodRe" data-l="Recalculer avec cette précision">Recalculer avec cette précision</button>`
+      : `<label class="f"><span>Pas de photo ? Décris ce que tu as mangé</span><textarea class="fi" id="fx" rows="2" placeholder="ex. une petite tranche de pain, ou : un bol de pâtes au pesto et un yaourt"></textarea></label>
+      <button class="btn" style="width:100%;margin-bottom:10px" data-act="foodRe" data-l="Estimer les calories et les protéines">Estimer les calories et les protéines</button>`)
+      : (img ? '' : '<p class="mut" style="font-size:12.5px;margin-bottom:10px">Avec une clé API (Réglages), tu peux décrire ton repas en une phrase et l\'app estime les calories et les protéines.</p>')}
       <button class="btn pri xl" data-act="foodSave">${editId ? 'Mettre à jour' : 'Enregistrer'}</button>`);
   }
   // redimensionne la photo avant envoi (1024 px max) et fabrique une vignette pour la liste
@@ -628,12 +631,14 @@
         },
         required: ['est_nourriture', 'aliment', 'kcal', 'proteines_g', 'glucides_g', 'lipides_g', 'confiance', 'commentaire']
       } } },
-      system: `Tu estimes le contenu nutritionnel d'un repas ou d'un snack à partir d'une photo, pour le carnet alimentaire d'une application de musculation. L'utilisateur photographie tout ce qu'il mange, il a besoin d'un ordre de grandeur réaliste et rapide, pas d'une précision de laboratoire.
+      system: `Tu estimes le contenu nutritionnel d'un repas ou d'un snack à partir d'une photo ou d'une simple description écrite, pour le carnet alimentaire d'une application de musculation. L'utilisateur photographie tout ce qu'il mange, il a besoin d'un ordre de grandeur réaliste et rapide, pas d'une précision de laboratoire.
 
 Profil : homme, ${N.h} cm, ${w ? fw(w.kg) : 85} kg, en phase de perte de gras avec maintien du muscle. Cibles du jour : ${N.kcal} kcal et ${N.prot} g de protéines. Déjà enregistré aujourd'hui avant cette photo : ${t.kcal} kcal et ${Math.round(t.p)} g de protéines.${N.fast ? ' Il observe en ce moment un jeûne orthodoxe (' + FASTS[fast().k][0] + ') : ni viande, ni laitages, ni œufs, poisson seulement certains jours. Dans le commentaire, signale simplement et sans jugement si un aliment visible ne semble pas compatible, et ne suggère que des aliments compatibles.' : ''}
 
-Estime les portions d'après ce qui est visible (taille de l'assiette, couverts, emballages, étiquettes lisibles). Donne toujours ta meilleure estimation chiffrée pour l'ensemble de ce qui est sur la photo, et indique ton niveau de confiance : « basse » quand la composition ou les quantités sont difficiles à voir (plat en sauce, aliments cachés, huile de cuisson invisible). « aliment » est un nom court en français. « commentaire » tient en une ou deux phrases, en le tutoyant : ce que ce repas apporte par rapport à ce qu'il lui reste à manger aujourd'hui, de façon factuelle et sans morale. Quand l'utilisateur précise ou corrige (quantités, ingrédients, mode de cuisson, ce qu'il n'a pas mangé), ses indications priment sur ce que tu crois voir : refais l'estimation à partir d'elles et dis en une phrase ce que ça change. Si la photo ne montre pas de nourriture ni de boisson, mets est_nourriture à false, les valeurs à 0, et dis-le dans le commentaire.`,
-      messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } }, { type: 'text', text: note ? `Voici la photo de ce que je mange. Ta première estimation était : ${prev && prev.aliment ? prev.aliment : 'inconnu'}, ${prev && prev.kcal != null ? prev.kcal : '?'} kcal, ${prev && prev.proteines_g != null ? prev.proteines_g : '?'} g de protéines, ${prev && prev.glucides_g != null ? prev.glucides_g : '?'} g de glucides, ${prev && prev.lipides_g != null ? prev.lipides_g : '?'} g de lipides. Ma précision ou correction : ${note}` : 'Voici la photo de ce que je mange.' }] }]
+Sans photo, estime à partir de la description : quand la quantité est vague (« un petit morceau », « une tranche », « un bol »), prends la portion courante correspondante, dis laquelle tu as retenue en grammes dans le commentaire, et mets la confiance à « moyenne » ou « basse ». Avec une photo, estime les portions d'après ce qui est visible (taille de l'assiette, couverts, emballages, étiquettes lisibles). Donne toujours ta meilleure estimation chiffrée pour l'ensemble de ce qui est sur la photo, et indique ton niveau de confiance : « basse » quand la composition ou les quantités sont difficiles à voir (plat en sauce, aliments cachés, huile de cuisson invisible). « aliment » est un nom court en français. « commentaire » tient en une ou deux phrases, en le tutoyant : ce que ce repas apporte par rapport à ce qu'il lui reste à manger aujourd'hui, de façon factuelle et sans morale. Quand l'utilisateur précise ou corrige (quantités, ingrédients, mode de cuisson, ce qu'il n'a pas mangé), ses indications priment sur ce que tu crois voir : refais l'estimation à partir d'elles et dis en une phrase ce que ça change. Si la photo ne montre pas de nourriture ni de boisson, mets est_nourriture à false, les valeurs à 0, et dis-le dans le commentaire.`,
+      messages: [{ role: 'user', content: b64
+        ? [{ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } }, { type: 'text', text: note ? `Voici la photo de ce que je mange. Ta première estimation était : ${prev && prev.aliment ? prev.aliment : 'inconnu'}, ${prev && prev.kcal != null ? prev.kcal : '?'} kcal, ${prev && prev.proteines_g != null ? prev.proteines_g : '?'} g de protéines, ${prev && prev.glucides_g != null ? prev.glucides_g : '?'} g de glucides, ${prev && prev.lipides_g != null ? prev.lipides_g : '?'} g de lipides. Ma précision ou correction : ${note}` : 'Voici la photo de ce que je mange.' }]
+        : [{ type: 'text', text: 'Je n\'ai pas de photo. Voici ce que j\'ai mangé : ' + note + (prev && prev.kcal != null && prev.kcal !== '' ? '. Estimation précédente à corriger : ' + (prev.aliment || '') + ', ' + prev.kcal + ' kcal.' : '') }] }]
     };
     let r;
     try {
@@ -882,10 +887,10 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
     snackAdd(t) { const s = (t.dataset.f ? FSNACKS : SNACKS)[+t.dataset.i]; foods().push({ id: uid(), date: new Date().toISOString(), n: s[0], kcal: s[2], p: s[3], c: 0, f: 0, img: '', ai: false }); save(); render(); toast(s[0] + ' ajouté · ' + s[2] + ' kcal'); },
     foodEdit(t) { const f = foods().find(x => x.id === t.dataset.id); if (f) foodSheet({ aliment: f.n, kcal: f.kcal, proteines_g: f.p, glucides_g: f.c, lipides_g: f.f }, f.img, '', '', f.id); },
     async foodRe(t) {
-      const note = $('#fx').value.trim(), p = pendFood; if (!note) { toast('Écris ta précision d\'abord'); return; }
-      t.disabled = true; t.textContent = 'Recalcul en cours…';
+      const note = $('#fx').value.trim(), p = pendFood; if (!note) { toast(p.big ? 'Écris ta précision d\'abord' : 'Décris d\'abord ce que tu as mangé'); return; }
+      t.disabled = true; t.textContent = 'Estimation en cours…';
       try { const d = await analyzeFood(p.big, note, p.prev); if ($('#sheet').classList.contains('show')) foodSheet(d, p.img, '', p.big, p.id); }
-      catch (e) { t.disabled = false; t.textContent = 'Recalculer avec cette précision'; toast(e.message); }
+      catch (e) { t.disabled = false; t.textContent = t.dataset.l; toast(e.message); }
     },
     quitStart() {
       const q = quit();
