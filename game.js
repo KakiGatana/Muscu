@@ -136,16 +136,16 @@
     tentacle: ['....aaaaaa....', '...aaaaaaaa...', '..aaeaaaaeaa..', '..aaeaaaaeaa..', '..aaaaaaaaaa..', '...aaammaaa...', '..a.aaaaaa.a..', '.a..a.aa.a..a.', 'a..a..aa..a..a', 'a..a..a.a.a..a', '.a..a.a.a..a..', '..a..a...a..a.']
   };
   const HB = ['...hhhh...', '..hhhhhh..', '..hsssss..', '..hssese..', '..ssssss..', '...tttt...', '.atttttta.', '.atttttta.', '.sbbbbbbs.', '..pppppp..'];
-  const LEGS = [['..pp..pp..', '..pp..pp..', '..oo..ooo.'], ['..pppppp..', '...pppp...', '...oooo...']];
+  const LEGS = [['..pp..pp..', '..pp..pp..', '..pp..pp..', '..oo..ooo.'], ['..pppppp..', '..pppppp..', '...pppp...', '...oooo...']];   // jambes longues : le héros est grand
   // silhouette selon l'alimentation : ok, fat (alourdi), thin (sous-alimenté), fit / peak (affûté)
   let BODY = 'ok', SMK = 0;   // SMK : nuage de fumée autour du héros (1 = épais, 0 = dissipé), il s'efface au fil du sevrage
   const BROWS = { fat: ['...tttt...', '.atttttttt', '.atttttttt', '.sbbbbbbbb'], thin: ['...tttt...', '..atttta..', '..atttta..', '..sbbbbs..'], fit: ['..tttttt..', 'aattttttaa', '.atttttta.', '.sbbbbbbs.'] };
   const bodyRows = () => { const b = BROWS[BODY === 'peak' ? 'fit' : BODY]; return b ? HB.slice(0, 5).concat(b, HB.slice(9)) : HB; };
   const SKIN = '#e8b98a', EYE = '#2a1c12', RB = ['#ff7ad9', '#ffd76a', '#6fe3ff', '#b388ff', '#fff'];
   const HP = [
-    { h: '#d9b44a', hat: 1, t: '#b8a27a', a: '#b8a27a', b: '#5a3d22', p: '#6b5a45', o: '#3b2a1a', w: { k: 'fork' } },
-    { h: '#5a3a22', t: '#8a5a2e', a: '#a9773f', b: '#3b2a1a', p: '#4d4a46', o: '#2a2019', w: { len: 3, c: '#b9c0c7' } },
-    { h: '#5a3a22', t: '#3f7a4a', a: '#3f7a4a', b: '#c8a04a', p: '#5a4632', o: '#2a2019', cape: '#8a2f2f', w: { len: 5, c: '#c9d0d6' } },
+    { h: '#4a2e1a', hat: '#d9b44a', t: '#b8a27a', a: '#b8a27a', b: '#5a3d22', p: '#6b5a45', o: '#3b2a1a', w: { k: 'fork' } },
+    { h: '#4a2e1a', t: '#8a5a2e', a: '#a9773f', b: '#3b2a1a', p: '#4d4a46', o: '#2a2019', w: { len: 3, c: '#b9c0c7' } },
+    { h: '#4a2e1a', t: '#3f7a4a', a: '#3f7a4a', b: '#c8a04a', p: '#5a4632', o: '#2a2019', cape: '#8a2f2f', w: { len: 5, c: '#c9d0d6' } },
     { h: '#9aa0a6', t: '#7d858c', a: '#7d858c', b: '#5a3d22', p: '#4d4a46', o: '#3a3a3a', shield: '#3b5f8a', w: { len: 6, c: '#d7dde3' } },
     { h: '#c3c9cf', plume: '#c0392b', t: '#c3c9cf', a: '#aab1b8', b: '#6b7178', p: '#aab1b8', o: '#6b7178', shield: '#c3c9cf', w: { len: 7, c: '#eef1f4' } },
     { h: '#e0b04a', plume: '#fff', t: '#e0b04a', a: '#c8963a', b: '#8a2f2f', p: '#c8963a', o: '#7a5a22', cape: '#a82828', shield: '#e0b04a', w: { len: 7, c: '#f1f4f7' } },
@@ -177,7 +177,7 @@
     spr(bodyRows().concat(LEGS[frame]), P, x, y, sc);
     if (BODY === 'peak') for (let k = 0; k < 4; k++) { const n = k + Math.floor(t * 4) * 7; R('#fff', x + hash(n) * 10 * sc, y + hash(n + 2) * 12 * sc, 1, 1); }
     if (P.mask) R(P.mask, x + 2 * sc, y + 4 * sc, 6 * sc, sc);
-    if (P.hat) R(P.h, x + sc, y + sc, 8 * sc, sc);
+    if (P.hat) { R(P.hat, x + 3 * sc, y - sc, 4 * sc, sc); R(P.hat, x + 2 * sc, y, 6 * sc, sc); R(P.hat, x + sc, y + sc, 8 * sc, sc); }
     if (P.plume) { R(P.plume, x + 3 * sc, y - 2 * sc, sc, 2 * sc); R(P.plume, x + 2 * sc, y - 2 * sc, sc, sc); }
     if (P.halo) R('#fff3b0', x + 2 * sc, y - (P.plume ? 4 : 2) * sc, 6 * sc, Math.max(1, sc / 2));
     if (P.shield) { R(P.shield, x - sc, y + 6 * sc, 3 * sc, 4 * sc); R('rgba(255,255,255,.35)', x, y + 7 * sc, sc, sc); R('rgba(0,0,0,.3)', x - sc, y + 9 * sc, 3 * sc, sc); }
@@ -738,7 +738,7 @@
   }
   function heroReal(x, tier, walking, atk, ak, T) {
     const P = HP[tier], w = P.w, fy = GY, sw = walking ? Math.sin(T * 10) : 0, bob = walking ? Math.abs(Math.sin(T * 10)) * .8 : Math.sin(T * 2) * .3;
-    const cx = x + 10, hipY = fy - 10 - bob, shY = fy - 19 - bob, hdY = fy - 22.6 - bob;
+    const cx = x + 10, hipY = fy - 12 - bob, shY = fy - 21.5 - bob, hdY = fy - 25.2 - bob;
     const line = (x1, y1, x2, y2) => { g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); };
     g.lineCap = 'round'; g.lineJoin = 'round';
     g.fillStyle = 'rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(cx, fy + .6, 8, 1.6, 0, 0, 7); g.fill();
@@ -764,7 +764,7 @@
     g.fillStyle = P.s; g.beginPath(); g.arc(cx, hdY, 3, 0, 7); g.fill();
     g.fillStyle = P.h; g.beginPath(); g.arc(cx, hdY, 3.2, Math.PI * .62, Math.PI * 1.92); g.closePath(); g.fill();
     if (P.mask) { g.fillStyle = P.mask; g.beginPath(); g.arc(cx, hdY, 3.1, -.1, Math.PI * .8); g.closePath(); g.fill(); }
-    if (P.hat) { g.fillStyle = P.h; g.beginPath(); g.moveTo(cx - 7, hdY - 1); g.lineTo(cx + .5, hdY - 6); g.lineTo(cx + 7.5, hdY - 1); g.closePath(); g.fill(); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(cx - 7, hdY - 1.4, 14.5, .6); }
+    if (P.hat) { g.fillStyle = P.hat; g.beginPath(); g.moveTo(cx - 7, hdY - 1); g.lineTo(cx + .5, hdY - 6); g.lineTo(cx + 7.5, hdY - 1); g.closePath(); g.fill(); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(cx - 7, hdY - 1.4, 14.5, .6); }
     if (P.e !== EYE) { g.shadowColor = P.e; g.shadowBlur = 7; } g.fillStyle = P.e; g.fillRect(cx + 1.2, hdY - .5, 1.1, .8); g.shadowBlur = 0;
     if (P.plume) { g.strokeStyle = P.plume; g.lineWidth = 1.5; g.beginPath(); g.moveTo(cx, hdY - 3); g.quadraticCurveTo(cx - 2, hdY - 8, cx - 6, hdY - 5 + Math.sin(T * 5)); g.stroke(); }
     if (P.halo) { g.shadowColor = '#fff3b0'; g.shadowBlur = 9; g.strokeStyle = '#fff3b0'; g.lineWidth = .8; g.beginPath(); g.ellipse(cx, hdY - 6.5, 4.4, 1.2, 0, 0, 7); g.stroke(); g.shadowBlur = 0; }
@@ -962,7 +962,7 @@
       const r = (s.t * 30) % 26; R('#fff', hx + 10 - r, GY - 1, r * 2, 1); g.globalAlpha = 1;
     }
     if (s.npc) { if (real) monReal(s.npc, s.mx, GY - 24, false, { w: 16, h: 24 }, T, 0); else spr(SHAPES.human, s.npc.p, Math.round(s.mx), GY - 24 - (s.phase !== 'npcTalk' && fr ? 1 : 0), 2); }
-    const hero = (X, al) => { g.save(); g.globalAlpha = al; if (rot) { g.translate(Math.round(X) + 10, GY); g.rotate(-rot); g.translate(-Math.round(X) - 10, -GY); } if (real) heroReal(X, tier, walking, atk, ak, T); else drawHero(Math.round(X), GY - 26 - (walking && fr ? 1 : 0), 2, tier, fr, atk, T); g.restore(); };
+    const hero = (X, al) => { g.save(); g.globalAlpha = al; if (rot) { g.translate(Math.round(X) + 10, GY); g.rotate(-rot); g.translate(-Math.round(X) - 10, -GY); } if (real) heroReal(X, tier, walking, atk, ak, T); else drawHero(Math.round(X), GY - 28 - (walking && fr ? 1 : 0), 2, tier, fr, atk, T); g.restore(); };
     if (ghost) { hero(ghost, .22); hero((ghost + hx) / 2, .4); }
     if (s.phase === 'lose') {
       const t = s.t;
@@ -1016,7 +1016,7 @@
   function portrait(canvas, level) {
     canvas.width = 40; canvas.height = 48;
     g = canvas.getContext('2d'); g.imageSmoothingEnabled = false; g.clearRect(0, 0, 40, 48);
-    drawHero(11, 20, 2, tierIdx(level), 0, false, 0);
+    drawHero(11, 19, 2, tierIdx(level), 0, false, 0);
   }
 
   window.RPG = { MAX, need, levelOf, streakMult, sessionXp, TIERS, ZONES, tierIdx, zoneIdx, SMOKE: { n: 'Démon de fumée', l: 1, s: 'ghost', sc: 3, p: gh('#8a8f96', '#ff5d73', '#2a2a30'), fly: true, boss: true }, buildQueue, start, stop, setMode, setBody: b => { BODY = b || 'ok'; }, setSmoke: v => { SMK = Math.max(0, Math.min(1, +v || 0)); }, portrait, tick: dt => { const s = st; if (s) { update(s, dt); if (st === s) draw(s); } } };

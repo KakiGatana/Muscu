@@ -122,7 +122,7 @@
 
   /* ---------- rendu ---------- */
   function render() {
-    quitSync();
+    quitSync(); achSync();
     const y = window.scrollY, v = top();
     let body;
     if (v) body = v.t === 'prog' ? progView(v) : v.t === 'edit' ? editView(v) : workView();
@@ -415,11 +415,33 @@
       if (left <= 0) { clearInterval(craveT); const w = $('#crw'); if (w) w.hidden = false; const br2 = $('#crbr'); if (br2) br2.textContent = 'C\'est passé.'; }
     }, 250);
   }
+  // succès : [titre, condition, obtenu, catégorie]. Un succès obtenu peut être porté comme titre.
   function badges() {
-    const maxSt = Math.max(0, ...S.logs.map(l => l.streak || 0)), spam = S.logs.filter(l => l.spam).length, full = S.logs.filter(l => l.full).length, rec = S.logs.reduce((n, l) => n + (l.rec || 0), 0);
-    return [['Régulier', 'Série de 5 séances', maxSt >= 5], ['Inarrêtable', 'Série de 10 séances', maxSt >= 10], ['Sans faute', '10 séances complètes', full >= 10],
-      ['Briseur de records', '10 records battus', rec >= 10], ['Roi du spam', '5 séances spam', spam >= 5], ['Centurion', '100 séances', S.logs.length >= 100],
-      ['Souffle retrouvé', '7 jours sans fumer', ((S.quit && S.quit.best) || 0) >= 7], ['Libéré', '30 jours sans fumer', ((S.quit && S.quit.best) || 0) >= 30], ['Poumons d\'acier', '100 jours sans fumer', ((S.quit && S.quit.best) || 0) >= 100]];
+    const L = S.logs, n = L.length, maxSt = Math.max(0, ...L.map(l => l.streak || 0)), cnt = k => L.filter(l => l[k]).length, rec = L.reduce((x, l) => x + (l.rec || 0), 0);
+    const tons = L.reduce((x, l) => x + l.ex.reduce((y, e) => y + e.sets.reduce((z, s) => z + (num(s.w) || 0) * (num(s.r) || 0), 0), 0), 0) / 1000;
+    const lvl = seenLvl(RPG.levelOf(totalXp())), boss = RPG.ZONES.reduce((x, z) => x + z.m.filter(m => m.boss && m.l <= lvl).length, 0);
+    const q = S.quit || {}, qb = Math.max(q.best || 0, q.start ? quitDays() : 0), fd = new Set(foods().map(logDay)).size;
+    const w = S.body.slice().sort((x, y) => x.d.localeCompare(y.d)).pop();
+    const B = (g, list) => list.map(b => [b[0], b[1], !!b[2], g]);
+    return [].concat(
+      B('Séances', [['Premier pas', '1 séance', n >= 1], ['Habitué', '10 séances', n >= 10], ['Acharné', '25 séances', n >= 25], ['Vétéran', '50 séances', n >= 50], ['Centurion', '100 séances', n >= 100], ['Increvable', '250 séances', n >= 250]]),
+      B('Série', [['Lancé', 'Série de 3', maxSt >= 3], ['Régulier', 'Série de 5', maxSt >= 5], ['Inarrêtable', 'Série de 10', maxSt >= 10], ['Machine', 'Série de 20', maxSt >= 20], ['Légende vivante', 'Série de 30', maxSt >= 30]]),
+      B('Force', [['Sans faute', '10 séances complètes', cnt('full') >= 10], ['Perfectionniste', '50 séances complètes', cnt('full') >= 50], ['Premier record', '1 record battu', rec >= 1], ['Briseur de records', '10 records battus', rec >= 10], ['Chasseur de records', '50 records battus', rec >= 50],
+        ['Dix tonnes', '10 tonnes soulevées au total', tons >= 10], ['Cent tonnes', '100 tonnes soulevées', tons >= 100], ['Mille tonnes', '1 000 tonnes soulevées', tons >= 1000]]),
+      B('Débrouille', [['Roi du spam', '5 séances spam', cnt('spam') >= 5], ['Sans excuse', '1 séance au poids du corps', cnt('pdc') >= 1], ['Moine guerrier', '10 séances au poids du corps', cnt('pdc') >= 10]]),
+      B('Chasseur', [['Chasseur de rang D', 'Niveau 10', lvl >= 10], ['Chasseur de rang C', 'Niveau 20', lvl >= 20], ['Chasseur de rang B', 'Niveau 35', lvl >= 35], ['Chasseur de rang A', 'Niveau 50', lvl >= 50], ['Chasseur de rang S', 'Niveau 75', lvl >= 75], ['Rang national', 'Niveau 100', lvl >= 100],
+        ['Tueur de boss', '1 boss terrassé', boss >= 1], ['Fléau des boss', '5 boss terrassés', boss >= 5], ['Plus aucun boss', 'Les 14 boss terrassés', boss >= 14]]),
+      B('Sevrage', [['Premier jour', '24 heures sans fumer', qb >= 1], ['Cap du manque', '3 jours sans fumer', qb >= 3], ['Souffle retrouvé', '7 jours sans fumer', qb >= 7], ['Libéré', '30 jours sans fumer', qb >= 30], ['Poumons d\'acier', '100 jours sans fumer', qb >= 100], ['Un an d\'air pur', '365 jours sans fumer', qb >= 365],
+        ['Dompteur de démon', '10 envies surmontées', (q.wins || 0) >= 10], ['Exorciste', '50 envies surmontées', (q.wins || 0) >= 50]]),
+      B('Nutrition', [['Carnet ouvert', '1 repas enregistré', foods().length >= 1], ['Semaine suivie', '7 jours avec des repas enregistrés', fd >= 7], ['Mois suivi', '30 jours avec des repas enregistrés', fd >= 30], ['Pesée régulière', '4 pesées', S.body.length >= 4], ['Objectif atteint', 'Poids cible atteint', !!w && w.kg <= nut().goalKg]])
+    );
+  }
+  // annonce les succès nouvellement obtenus (silencieux au premier passage, pour ne pas tout annoncer d'un coup)
+  function achSync() {
+    const got = badges().filter(b => b[2]).map(b => b[0]);
+    if (!S.ach) { S.ach = got; save(); return; }
+    const fresh = got.filter(x => S.ach.indexOf(x) < 0);
+    if (fresh.length) { S.ach = got; save(); setTimeout(() => toast('Succès obtenu : ' + fresh.join(', ')), 600); }
   }
   // niveau déjà montré à l'écran : montées de niveau, tenues, zones et boss attendent que l'Aventure soit ouverte
   function seenLvl(L) { return Math.max(1, Math.min(L, (S.adv && S.adv.seen) || 1)); }
@@ -446,10 +468,13 @@
         ${open ? `<ul>${z.m.map(m => `<li class="${m.l <= L ? 'won' : ''}"><span>${m.boss ? '<b class="boss">Boss</b>' : ''}${esc(m.n)}</span><small>${m.l <= L ? (m.boss ? 'terrassé' : 'vaincu') : 'niveau ' + m.l}</small></li>`).join('')}</ul>` : ''}</div>`;
     }).join('');
     const tiers = RPG.TIERS.map((t, i) => `<div class="rk"><div class="grow"><b>${L >= t.l ? esc(t.t) : '???'}</b><div class="mut" style="font-size:12.5px">${L >= t.l ? esc(t.g) : 'Se débloque au niveau ' + t.l}</div></div>${i === ti ? '<span class="tagc">Actuel</span>' : ''}</div>`).join('');
-    const bd = badges().map(b => `<div class="rk"><div class="grow"><b class="${b[2] ? '' : 'mut'}">${b[0]}</b><div class="mut" style="font-size:12.5px">${b[1]}</div></div>${b[2] ? '<span class="chip ok">Obtenu</span>' : ''}</div>`).join('');
+    const all = badges(), nb = all.filter(b => b[2]).length; let grp = '';
+    const bd = all.map(b => { const h = b[3] !== grp ? `<div class="sec"><span>${esc(grp = b[3])}</span></div>` : ''; return h + (b[2]
+      ? `<button class="rk ach" data-act="titleSet" data-v="${esc(b[0])}"><div class="grow"><b>${esc(b[0])}</b><div class="mut" style="font-size:12.5px">${esc(b[1])}</div></div><span class="chip ${S.title === b[0] ? 'ok' : ''}">${S.title === b[0] ? 'Titre porté' : 'Porter'}</span></button>`
+      : `<div class="rk ach lock"><div class="grow"><b class="mut">${esc(b[0])}</b><div class="mut" style="font-size:12.5px">${esc(b[1])}</div></div></div>`); }).join('');
     return `<div class="sect-h first"><h2>Aventure</h2><button class="btn sm ghost" data-act="gfx">Style : ${S.opts.gfx === 'real' ? 'Réaliste' : 'Pixel'}</button></div>
       <div class="scene"><div class="hud"><b>NIV. ${L}</b><span>${esc(RPG.TIERS[ti].t)}</span><div class="xp"><i style="width:${Math.min(100, L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div><div class="hp"><i style="width:100%"></i></div><small class="hpt">PV</small></div>${pending ? '<button class="skip" data-act="advSkip">Passer</button>' : ''}<canvas id="adv" width="144" height="128"></canvas><div id="advcap" class="cap">${esc(S.name)} avance dans ${esc(RPG.ZONES[zi].n.toLowerCase())}.</div></div>
-      <div class="card me"><canvas data-me class="px" width="40" height="48"></canvas><div class="grow"><div class="eyebrow">Niveau ${L}</div><h3>${esc(S.name)}, ${esc(RPG.TIERS[ti].t)}</h3>
+      <div class="card me"><canvas data-me class="px" width="40" height="48"></canvas><div class="grow"><div class="eyebrow">Niveau ${L}</div><h3>${esc(S.name)}, ${esc(RPG.TIERS[ti].t)}</h3>${S.title ? `<div class="ttl">« ${esc(S.title)} »</div>` : ''}
         <div class="xp"><i style="width:${Math.min(100, L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div><p class="mut" style="font-size:12.5px">${pending ? 'Montée de niveau en cours…' : L >= RPG.MAX ? xp + ' XP · niveau maximum atteint' : (xp - xa) + ' / ' + (xb - xa) + ' XP · niveau ' + (L + 1) + ' dans ' + (xb - xp) + ' XP'}</p></div></div>
       ${quitCard()}
       <div class="stats">
@@ -466,7 +491,7 @@
         <li>Niveau maximum : <b>100</b>. À rythme régulier (environ 4 séances par semaine), compte à peu près un an pour le niveau 50 et quatre ans pour le niveau 100.</li></ul></details>
       <div class="sect-h"><h2>Le voyage</h2></div>${zones}
       <div class="sect-h"><h2>Équipement</h2></div>${tiers}
-      <div class="sect-h"><h2>Titres</h2></div>${bd}`;
+      <div class="sect-h"><h2>Succès</h2><span class="chip">${nb} / ${all.length}</span></div><p class="mut" style="font-size:12.5px;margin:-4px 2px 4px">Touche un succès obtenu pour le porter comme titre.</p>${bd}`;
   }
 
   /* ----- Repas : photo, analyse par IA (clé personnelle), suivi des calories et forme du personnage ----- */
@@ -479,7 +504,7 @@
   const fast = () => (S.fast = S.fast || { on: false, k: 'nat', end: '', kcal: 2200 });
   const fastOn = () => { const f = fast(); return !!f.on && (!f.end || todayISO() <= f.end); };
   const fastEnd = k => { const md = FASTS[k][1]; if (!md) return ''; const y = new Date().getFullYear(), d = y + '-' + md; return d >= todayISO() ? d : (y + 1) + '-' + md; };
-  const eff = () => { const n = nut(); return fastOn() ? Object.assign({}, n, { kcal: fast().kcal || n.kcal, fast: true }) : n; };
+  const eff = () => { const n = nut(); return fastOn() ? Object.assign({}, n, { kcal: fast().kcal || n.kcal, prot: fast().prot || 130, fast: true }) : n; };
   function fastCard() {
     const f = fast(), wd = (new Date().getDay() + 6) % 7, strictFish = f.k === 'gc' || f.k === 'dor';
     const rule = wd === 0 || wd === 2 || wd === 4 ? 'Jour strict : pas de poisson, et souvent ni huile ni vin.'
@@ -489,7 +514,7 @@
       <p style="font-weight:700;margin:8px 0 4px">${rule}</p>
       <p class="mut" style="font-size:12.5px">Les usages varient selon les Églises et les paroisses : suis ce que te recommande ton père spirituel.</p>
       <details class="why" style="margin-top:10px"><summary>Tenir la sèche et la salle pendant le jeûne</summary>
-        <p>Sans viande, laitages ni œufs, tes protéines viennent des lentilles, pois chiches, haricots, tofu, seitan, des fruits de mer, et du poisson les jours permis. Approche-toi le plus possible de tes ${nut().prot} g : c'est ce qui protège ton muscle quand tu manges moins.</p>
+        <p>Sans viande, laitages ni œufs, tes protéines viennent des lentilles, pois chiches, haricots, tofu, seitan, des fruits de mer, et du poisson les jours permis. Vise ${fast().prot || 130} g par jour pendant le jeûne (au lieu de ${nut().prot} g) : c'est ce qui protège ton muscle quand tu manges moins.</p>
         <p>La whey est un laitage : remplace-la par une protéine végétale (pois, soja). La créatine reste compatible.</p>
         <p>À la salle, garde tes charges et réduis le volume si l'énergie manque : le noyau seul est une vraie séance.</p>
         <p class="mut">Ton personnage n'est pas pénalisé pour les calories basses pendant le jeûne.</p></details></div>`;
@@ -652,8 +677,9 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
         <div class="sw"><span>Vibration</span><button class="tog ${S.opts.vib ? 'on' : ''}" data-act="optVib" aria-label="Vibration"></button></div></div>
       <div class="card"><div class="sw"><span><b>Jeûne orthodoxe</b></span><button class="tog ${fast().on ? 'on' : ''}" data-act="fastTog" aria-label="Jeûne"></button></div>
         ${fast().on ? `<label class="f" style="margin-top:8px"><span>Lequel</span><select class="fi" data-fast="k">${Object.keys(FASTS).map(k => `<option value="${k}" ${fast().k === k ? 'selected' : ''}>${esc(FASTS[k][0])}</option>`).join('')}</select></label>
-        <div class="g2"><label class="f"><span>Jusqu'au</span><input class="fi" type="date" data-fast="end" value="${esc(fast().end)}"></label>
-        <label class="f"><span>Calories pendant le jeûne</span><input class="fi" inputmode="numeric" data-fast="kcal" value="${fast().kcal}"></label></div>
+        <label class="f"><span>Jusqu'au</span><input class="fi" type="date" data-fast="end" value="${esc(fast().end)}"></label>
+        <div class="g2"><label class="f"><span>Calories du jeûne</span><input class="fi" inputmode="numeric" data-fast="kcal" value="${fast().kcal}"></label>
+        <label class="f"><span>Protéines du jeûne (g)</span><input class="fi" inputmode="numeric" data-fast="prot" value="${fast().prot || 130}"></label></div>
         <p class="mut" style="font-size:12.5px">${fastOn() ? 'Actif : snacks compatibles, cible de calories du jeûne, et le personnage n\'est pas pénalisé si tu manges moins.' : 'La date de fin est passée : le jeûne est terminé.'}</p>` : '<p class="mut" style="font-size:12.5px">Sans viande, laitages ni œufs : l\'app adapte les snacks, la cible de calories et l\'analyse des photos.</p>'}</div>
       <div class="card"><div class="eyebrow" style="margin-bottom:10px">Nutrition</div>
         <div class="g3"><label class="f"><span>Calories</span><input class="fi" inputmode="numeric" data-nut="kcal" value="${nut().kcal}"></label>
@@ -839,6 +865,7 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
   ];
   let swReg = null;
   const A = {
+    titleSet(t) { S.title = S.title === t.dataset.v ? '' : t.dataset.v; save(); render(); },
     fastTog() { const f = fast(); f.on = !f.on; if (f.on && (!f.end || f.end < todayISO())) f.end = fastEnd(f.k); save(); render(); },
     async updCheck() {
       if (!swReg) { toast('Mises à jour indisponibles dans ce navigateur'); return; }
@@ -1057,7 +1084,7 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
     }
     if (t.dataset.pf) { progById(top().id)[t.dataset.pf] = t.value; save(); return; }
     if (t.dataset.name !== undefined) { S.name = t.value; save(); }
-    if (t.dataset.fast) { const f = fast(), k = t.dataset.fast; if (k === 'kcal') { const n = num(t.value); if (!isNaN(n) && n > 0) f.kcal = n; } else if (k === 'k') { f.k = t.value; f.end = fastEnd(f.k) || f.end; save(); render(); return; } else f[k] = t.value; save(); }
+    if (t.dataset.fast) { const f = fast(), k = t.dataset.fast; if (k === 'kcal' || k === 'prot') { const n = num(t.value); if (!isNaN(n) && n > 0) f[k] = n; } else if (k === 'k') { f.k = t.value; f.end = fastEnd(f.k) || f.end; save(); render(); return; } else f[k] = t.value; save(); }
     if (t.dataset.nut) { const n = num(t.value); if (!isNaN(n) && n > 0) { nut()[t.dataset.nut] = n; save(); } }
     if (t.dataset.aikey !== undefined) { try { const k = t.value.trim(); if (k) localStorage.setItem(AIKEY, k); else localStorage.removeItem(AIKEY); } catch (e) { } }
   });
