@@ -183,7 +183,7 @@
     const adv = `<button class="card advstrip" data-act="tab" data-t="adv"><canvas data-me class="px" width="40" height="48"></canvas>
       <div class="grow"><div class="eyebrow">Niveau ${L} · ${RPG.TIERS[RPG.tierIdx(L)].t}</div><div class="xp"><i style="width:${Math.min(100, L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div>
       <p class="mut">${pending ? '<b class="pend">Niveau supérieur ! Ouvre l\'aventure</b>' : L >= RPG.MAX ? 'Niveau maximum' : (xp - xa) + ' / ' + (xb - xa) + ' XP'}${stk > 1 ? ' · série de ' + stk : ''}</p></div>${svg('go', 'go')}</button>`;
-    const nt = dayTot(todayISO()), snk = `<button class="card snackstrip" data-act="tab" data-t="food"><div class="grow"><div class="eyebrow">Fringale ?</div><p>Un verre d'eau, 10 minutes, puis un snack prévu. Il te reste ${Math.max(0, nut().kcal - nt.kcal)} kcal aujourd'hui.</p></div>${svg('go', 'go')}</button>`;
+    const nt = dayTot(todayISO()), snk = `<button class="card snackstrip" data-act="tab" data-t="food"><div class="grow"><div class="eyebrow">Fringale ?</div><p>Un verre d'eau, 10 minutes, puis un snack prévu. Il te reste ${Math.max(0, eff().kcal - nt.kcal)} kcal aujourd'hui.</p></div>${svg('go', 'go')}</button>`;
     return `${hero}${spamBtn}${adv}${snk}${nudge}
       <div class="sect-h"><h2>La semaine</h2><button class="btn sm ghost" data-act="weekEdit">${svg('edit')}Modifier</button></div>
       <div class="week">${wk}</div>
@@ -474,26 +474,47 @@
   const aiKey = () => { try { return localStorage.getItem(AIKEY) || ''; } catch (e) { return ''; } };
   const nut = () => (S.nut = S.nut || { kcal: 2500, prot: 170, goalKg: 81, h: 191 });
   const foods = () => (S.food = S.food || []);
+  // jeûnes orthodoxes : sans viande, laitages ni œufs. Cible de calories propre, snacks compatibles, pas de pénalité « sous-alimenté »
+  const FASTS = { nat: ['Carême de la Nativité', '12-24'], nato: ['Carême de la Nativité (ancien calendrier)', '01-06'], gc: ['Grand Carême', ''], ap: ['Carême des Apôtres', ''], dor: ['Carême de la Dormition', '08-14'], autre: ['Jeûne', ''] };
+  const fast = () => (S.fast = S.fast || { on: false, k: 'nat', end: '', kcal: 2200 });
+  const fastOn = () => { const f = fast(); return !!f.on && (!f.end || todayISO() <= f.end); };
+  const fastEnd = k => { const md = FASTS[k][1]; if (!md) return ''; const y = new Date().getFullYear(), d = y + '-' + md; return d >= todayISO() ? d : (y + 1) + '-' + md; };
+  const eff = () => { const n = nut(); return fastOn() ? Object.assign({}, n, { kcal: fast().kcal || n.kcal, fast: true }) : n; };
+  function fastCard() {
+    const f = fast(), wd = (new Date().getDay() + 6) % 7, strictFish = f.k === 'gc' || f.k === 'dor';
+    const rule = wd === 0 || wd === 2 || wd === 4 ? 'Jour strict : pas de poisson, et souvent ni huile ni vin.'
+      : wd >= 5 ? (strictFish ? 'Week-end : huile et vin généralement permis, pas de poisson.' : 'Week-end : poisson, huile et vin généralement permis.')
+      : (strictFish ? 'Jour strict : pas de poisson, et souvent ni huile ni vin.' : 'Huile et vin généralement permis, pas de poisson.');
+    return `<div class="card fastc"><div class="row sp"><div class="eyebrow">${esc(FASTS[f.k][0])}</div>${f.end ? `<span class="chip">jusqu'au ${fdate(f.end + 'T12:00:00')}</span>` : ''}</div>
+      <p style="font-weight:700;margin:8px 0 4px">${rule}</p>
+      <p class="mut" style="font-size:12.5px">Les usages varient selon les Églises et les paroisses : suis ce que te recommande ton père spirituel.</p>
+      <details class="why" style="margin-top:10px"><summary>Tenir la sèche et la salle pendant le jeûne</summary>
+        <p>Sans viande, laitages ni œufs, tes protéines viennent des lentilles, pois chiches, haricots, tofu, seitan, des fruits de mer, et du poisson les jours permis. Approche-toi le plus possible de tes ${nut().prot} g : c'est ce qui protège ton muscle quand tu manges moins.</p>
+        <p>La whey est un laitage : remplace-la par une protéine végétale (pois, soja). La créatine reste compatible.</p>
+        <p>À la salle, garde tes charges et réduis le volume si l'énergie manque : le noyau seul est une vraie séance.</p>
+        <p class="mut">Ton personnage n'est pas pénalisé pour les calories basses pendant le jeûne.</p></details></div>`;
+  }
   const dayTot = iso => foods().filter(f => logDay(f) === iso).reduce((a, f) => ({ kcal: a.kcal + (+f.kcal || 0), p: a.p + (+f.p || 0), n: a.n + 1 }), { kcal: 0, p: 0, n: 0 });
   // forme du personnage : moyenne des jours renseignés sur 7 jours, comparée à tes cibles
   function bodyForm() {
-    const N = nut(), days = [], d = new Date();
+    const N = eff(), days = [], d = new Date();
     for (let i = 0; i < 7; i++) { const t = dayTot(isoDay(d)); if (t.n && (i > 0 || t.kcal >= N.kcal * .6)) days.push(t); d.setDate(d.getDate() - 1); }
     if (days.length < 2) return { k: 'ok', label: 'Neutre', txt: 'Enregistre tes repas au moins deux jours pour que ton personnage reflète ton alimentation.' };
     const kc = Math.round(days.reduce((a, t) => a + t.kcal, 0) / days.length), pr = Math.round(days.reduce((a, t) => a + t.p, 0) / days.length), diff = kc - N.kcal;
     const w = S.body.slice().sort((a, b) => a.d.localeCompare(b.d)).pop(), bmi = w ? w.kg / Math.pow(N.h / 100, 2) : 0;
     const base = `Moyenne sur ${days.length} jours : ${kc} kcal (cible ${N.kcal}) et ${pr} g de protéines (cible ${N.prot}).`;
     if (diff > 300) return { k: 'fat', label: 'Alourdi', txt: base + ' Tu es au-dessus de ta cible : le personnage s\'épaissit.' };
+    if (N.fast && diff < -600) return { k: 'ok', label: 'En jeûne', txt: base + (kc < 1700 ? ' C\'est très bas : surveille ta force et ta récupération, et garde tes protéines aussi hautes que possible.' : ' Pendant le jeûne, ton personnage n\'est pas pénalisé pour les calories basses.') };
     if (diff < -600) return { k: 'thin', label: 'Sous-alimenté', txt: base + ' C\'est trop bas : tu vas perdre du muscle et de la force. Remonte vers ta cible.' };
     if (pr >= N.prot * .8) { const peak = w && w.kg <= N.goalKg + .5 && bmi >= 20 && bmi <= 25; return { k: peak ? 'peak' : 'fit', label: peak ? 'Au sommet' : 'Affûté', txt: base + (peak ? ' Poids cible atteint et alimentation tenue.' : ' Calories et protéines tenues : le personnage s\'affûte.') }; }
     return { k: 'ok', label: 'Correct', txt: base + ' Les calories sont bonnes, mais les protéines sont trop basses pour protéger le muscle.' };
   }
   function foodView() {
-    const N = nut(), t = dayTot(todayISO()), bf = bodyForm(), key = aiKey(), pct = (v, m) => Math.min(100, Math.round(v / m * 100));
+    const N = eff(), t = dayTot(todayISO()), bf = bodyForm(), key = aiKey(), pct = (v, m) => Math.min(100, Math.round(v / m * 100));
     const list = foods().filter(f => logDay(f) === todayISO()).reverse().map(f => `<div class="rk food">${f.img ? `<img src="${f.img}" alt="">` : '<div class="noimg"></div>'}<button class="grow" style="text-align:left" data-act="foodEdit" data-id="${f.id}"><b>${esc(f.n)}</b><div class="mut" style="font-size:12.5px">${f.kcal} kcal · ${f.p} g prot.${f.ai ? ' · estimé par IA' : ''} · modifier</div></button><button data-act="foodDel" data-id="${f.id}" class="mut" aria-label="Supprimer">${svg('trash')}</button></div>`).join('');
     const d = new Date(); let week = '';
     for (let i = 1; i < 7; i++) { d.setDate(d.getDate() - 1); const x = dayTot(isoDay(d)); if (x.n) week += `<div class="rk"><span class="grow">${fdate(d.toISOString())}</span><span class="v">${x.kcal} kcal</span><span class="mut" style="font-family:var(--mono);font-size:13px">${Math.round(x.p)} g</span></div>`; }
-    return `<div class="sect-h first"><h2>Repas</h2><span class="chip">${t.n} aujourd'hui</span></div>
+    return `<div class="sect-h first"><h2>Repas</h2><span class="chip">${t.n} aujourd'hui</span></div>${N.fast ? fastCard() : ''}
       <div class="card"><div class="row sp"><b class="bignum">${t.kcal}<small> / ${N.kcal} kcal</small></b><span class="chip ${t.kcal > N.kcal ? 'warn' : ''}">${t.kcal > N.kcal ? '+' + (t.kcal - N.kcal) : 'reste ' + (N.kcal - t.kcal)}</span></div>
         <div class="xp"><i style="width:${pct(t.kcal, N.kcal)}%"></i></div>
         <div class="row sp" style="margin-top:10px"><span>Protéines</span><b style="font-family:var(--mono)">${Math.round(t.p)} / ${N.prot} g</b></div>
@@ -518,9 +539,18 @@
     ['Crudités + dip de fromage blanc', 'à volonté', 50, 4, ''], ['Cornichons', 'à volonté', 10, 0, 'Pour l\'envie de salé'],
     ['Chocolat noir 85 %', '2 carrés', 60, 1, 'Le goût intense suffit'], ['Compote sans sucre ajouté', '1 gourde', 55, 0, ''], ['Fruits rouges surgelés', '1 poignée', 40, 1, 'Dans le skyr = vrai dessert']
   ];
+  const FSNACKS = [
+    ['Protéine végétale en poudre (pois)', '30 g', 115, 23, 'Remplace la whey pendant le jeûne'],
+    ['Crevettes', '100 g', 90, 20, 'Les fruits de mer sont permis dans la plupart des usages'],
+    ['Tofu fumé', '100 g', 150, 16, ''], ['Edamame', '100 g', 120, 11, 'Le snack végétal le plus riche en protéines'],
+    ['Houmous + crudités', '60 g', 150, 5, 'Pois chiches et sésame : ça cale'], ['Pois chiches grillés', '30 g', 120, 6, ''],
+    ['Galettes de riz + purée d\'amande', '2 galettes', 130, 3, 'Une cuillère à café de purée, pas plus'],
+    ['Pop-corn nature maison', '30 g', 120, 3, 'Sans huile les jours stricts'], ['Clémentines', '3', 110, 2, ''], ['Cornichons', 'à volonté', 10, 0, 'Pour l\'envie de salé'],
+    ['Chocolat noir 85 %', '2 carrés', 60, 1, 'Vérifie qu\'il est sans lait'], ['Compote sans sucre ajouté', '1 gourde', 55, 0, '']
+  ];
   function snackCard(N, t) {
     const rest = N.kcal - t.kcal, pr = N.prot - t.p;
-    const order = SNACKS.map((s, i) => [s, i]).sort((x, y) => pr > 25 ? y[0][3] - x[0][3] : x[0][2] - y[0][2]);
+    const order = (N.fast ? FSNACKS : SNACKS).map((s, i) => [s, i]).sort((x, y) => pr > 25 ? y[0][3] - x[0][3] : x[0][2] - y[0][2]);
     const advice = rest <= 0 ? 'Tu as atteint ta cible de calories. Si la faim est là : cornichons, crudités, thé ou eau pétillante.'
       : pr > 25 ? `Il te reste ${rest} kcal et ${Math.round(pr)} g de protéines : prends un snack protéiné, il cale beaucoup mieux.`
       : `Il te reste ${rest} kcal et tes protéines sont presque faites : choisis ce qui te fait plaisir dans la liste.`;
@@ -529,7 +559,7 @@
         <p class="mut">Une bonne partie des fringales du soir, c'est de l'ennui ou de la soif. Si la faim est toujours là, prends un snack prévu, sorti en portion. Jamais le paquet à portée de main.</p>
         <p class="note">${esc(advice)}</p>
         <div class="eyebrow" style="margin:12px 0 8px">Touche un snack pour l'ajouter à ta journée</div>
-        <div class="sgrid">${order.map(([s, i]) => `<button class="${s[2] > rest && rest > 0 ? 'over' : ''}" data-act="snackAdd" data-i="${i}"><b>${esc(s[0])}</b><span>${esc(s[1])} · ${s[2]} kcal${s[3] >= 10 ? ' · ' + s[3] + ' g prot.' : ''}</span>${s[4] ? `<small>${esc(s[4])}</small>` : ''}</button>`).join('')}</div>
+        <div class="sgrid">${order.map(([s, i]) => `<button class="${s[2] > rest && rest > 0 ? 'over' : ''}" data-act="snackAdd" data-i="${i}"${N.fast ? ' data-f="1"' : ''}><b>${esc(s[0])}</b><span>${esc(s[1])} · ${s[2]} kcal${s[3] >= 10 ? ' · ' + s[3] + ' g prot.' : ''}</span>${s[4] ? `<small>${esc(s[4])}</small>` : ''}</button>`).join('')}</div>
         <div class="why" style="margin-top:12px"><b style="color:#ffb07a">Les pièges</b>
           <p>Amandes et noix : 30 g = 180 kcal. Sain mais très dense, à pré-portionner.</p><p>Billes de chocolat et formats en vrac : n'en aie pas chez toi. L'environnement bat la discipline.</p><p>Sodas, sirops, alcool : beaucoup de calories, aucune satiété.</p>
           <p class="mut">200 à 250 kcal de snack par jour entrent dans tes ${N.kcal} sans problème. Ce qui ruine une sèche, c'est le grignotage non compté.</p></div></div>`;
@@ -561,7 +591,7 @@
     });
   }
   async function analyzeFood(b64, note, prev) {
-    const N = nut(), t = dayTot(todayISO()), w = S.body.slice().sort((a, b) => a.d.localeCompare(b.d)).pop();
+    const N = eff(), t = dayTot(todayISO()), w = S.body.slice().sort((a, b) => a.d.localeCompare(b.d)).pop();
     const body = {
       model: 'claude-opus-5-5', max_tokens: 16000, fallbacks: 'default',
       output_config: { effort: 'low', format: { type: 'json_schema', schema: {
@@ -575,7 +605,7 @@
       } } },
       system: `Tu estimes le contenu nutritionnel d'un repas ou d'un snack à partir d'une photo, pour le carnet alimentaire d'une application de musculation. L'utilisateur photographie tout ce qu'il mange, il a besoin d'un ordre de grandeur réaliste et rapide, pas d'une précision de laboratoire.
 
-Profil : homme, ${N.h} cm, ${w ? fw(w.kg) : 85} kg, en phase de perte de gras avec maintien du muscle. Cibles du jour : ${N.kcal} kcal et ${N.prot} g de protéines. Déjà enregistré aujourd'hui avant cette photo : ${t.kcal} kcal et ${Math.round(t.p)} g de protéines.
+Profil : homme, ${N.h} cm, ${w ? fw(w.kg) : 85} kg, en phase de perte de gras avec maintien du muscle. Cibles du jour : ${N.kcal} kcal et ${N.prot} g de protéines. Déjà enregistré aujourd'hui avant cette photo : ${t.kcal} kcal et ${Math.round(t.p)} g de protéines.${N.fast ? ' Il observe en ce moment un jeûne orthodoxe (' + FASTS[fast().k][0] + ') : ni viande, ni laitages, ni œufs, poisson seulement certains jours. Dans le commentaire, signale simplement et sans jugement si un aliment visible ne semble pas compatible, et ne suggère que des aliments compatibles.' : ''}
 
 Estime les portions d'après ce qui est visible (taille de l'assiette, couverts, emballages, étiquettes lisibles). Donne toujours ta meilleure estimation chiffrée pour l'ensemble de ce qui est sur la photo, et indique ton niveau de confiance : « basse » quand la composition ou les quantités sont difficiles à voir (plat en sauce, aliments cachés, huile de cuisson invisible). « aliment » est un nom court en français. « commentaire » tient en une ou deux phrases, en le tutoyant : ce que ce repas apporte par rapport à ce qu'il lui reste à manger aujourd'hui, de façon factuelle et sans morale. Quand l'utilisateur précise ou corrige (quantités, ingrédients, mode de cuisson, ce qu'il n'a pas mangé), ses indications priment sur ce que tu crois voir : refais l'estimation à partir d'elles et dis en une phrase ce que ça change. Si la photo ne montre pas de nourriture ni de boisson, mets est_nourriture à false, les valeurs à 0, et dis-le dans le commentaire.`,
       messages: [{ role: 'user', content: [{ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } }, { type: 'text', text: note ? `Voici la photo de ce que je mange. Ta première estimation était : ${prev && prev.aliment ? prev.aliment : 'inconnu'}, ${prev && prev.kcal != null ? prev.kcal : '?'} kcal, ${prev && prev.proteines_g != null ? prev.proteines_g : '?'} g de protéines, ${prev && prev.glucides_g != null ? prev.glucides_g : '?'} g de glucides, ${prev && prev.lipides_g != null ? prev.lipides_g : '?'} g de lipides. Ma précision ou correction : ${note}` : 'Voici la photo de ce que je mange.' }] }]
@@ -620,6 +650,11 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
       <div class="card">
         <div class="sw"><span>Son à la fin du repos</span><button class="tog ${S.opts.sound ? 'on' : ''}" data-act="optSound" aria-label="Son"></button></div>
         <div class="sw"><span>Vibration</span><button class="tog ${S.opts.vib ? 'on' : ''}" data-act="optVib" aria-label="Vibration"></button></div></div>
+      <div class="card"><div class="sw"><span><b>Jeûne orthodoxe</b></span><button class="tog ${fast().on ? 'on' : ''}" data-act="fastTog" aria-label="Jeûne"></button></div>
+        ${fast().on ? `<label class="f" style="margin-top:8px"><span>Lequel</span><select class="fi" data-fast="k">${Object.keys(FASTS).map(k => `<option value="${k}" ${fast().k === k ? 'selected' : ''}>${esc(FASTS[k][0])}</option>`).join('')}</select></label>
+        <div class="g2"><label class="f"><span>Jusqu'au</span><input class="fi" type="date" data-fast="end" value="${esc(fast().end)}"></label>
+        <label class="f"><span>Calories pendant le jeûne</span><input class="fi" inputmode="numeric" data-fast="kcal" value="${fast().kcal}"></label></div>
+        <p class="mut" style="font-size:12.5px">${fastOn() ? 'Actif : snacks compatibles, cible de calories du jeûne, et le personnage n\'est pas pénalisé si tu manges moins.' : 'La date de fin est passée : le jeûne est terminé.'}</p>` : '<p class="mut" style="font-size:12.5px">Sans viande, laitages ni œufs : l\'app adapte les snacks, la cible de calories et l\'analyse des photos.</p>'}</div>
       <div class="card"><div class="eyebrow" style="margin-bottom:10px">Nutrition</div>
         <div class="g3"><label class="f"><span>Calories</span><input class="fi" inputmode="numeric" data-nut="kcal" value="${nut().kcal}"></label>
         <label class="f"><span>Protéines (g)</span><input class="fi" inputmode="numeric" data-nut="prot" value="${nut().prot}"></label>
@@ -804,6 +839,7 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
   ];
   let swReg = null;
   const A = {
+    fastTog() { const f = fast(); f.on = !f.on; if (f.on && (!f.end || f.end < todayISO())) f.end = fastEnd(f.k); save(); render(); },
     async updCheck() {
       if (!swReg) { toast('Mises à jour indisponibles dans ce navigateur'); return; }
       toast('Recherche en cours…');
@@ -816,7 +852,7 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
       try { const rs = await navigator.serviceWorker.getRegistrations(); await Promise.all(rs.map(r => r.unregister())); const ks = await caches.keys(); await Promise.all(ks.map(k => caches.delete(k))); } catch (e) { }
       location.reload();
     },
-    snackAdd(t) { const s = SNACKS[+t.dataset.i]; foods().push({ id: uid(), date: new Date().toISOString(), n: s[0], kcal: s[2], p: s[3], c: 0, f: 0, img: '', ai: false }); save(); render(); toast(s[0] + ' ajouté · ' + s[2] + ' kcal'); },
+    snackAdd(t) { const s = (t.dataset.f ? FSNACKS : SNACKS)[+t.dataset.i]; foods().push({ id: uid(), date: new Date().toISOString(), n: s[0], kcal: s[2], p: s[3], c: 0, f: 0, img: '', ai: false }); save(); render(); toast(s[0] + ' ajouté · ' + s[2] + ' kcal'); },
     foodEdit(t) { const f = foods().find(x => x.id === t.dataset.id); if (f) foodSheet({ aliment: f.n, kcal: f.kcal, proteines_g: f.p, glucides_g: f.c, lipides_g: f.f }, f.img, '', '', f.id); },
     async foodRe(t) {
       const note = $('#fx').value.trim(), p = pendFood; if (!note) { toast('Écris ta précision d\'abord'); return; }
@@ -1021,6 +1057,7 @@ Estime les portions d'après ce qui est visible (taille de l'assiette, couverts,
     }
     if (t.dataset.pf) { progById(top().id)[t.dataset.pf] = t.value; save(); return; }
     if (t.dataset.name !== undefined) { S.name = t.value; save(); }
+    if (t.dataset.fast) { const f = fast(), k = t.dataset.fast; if (k === 'kcal') { const n = num(t.value); if (!isNaN(n) && n > 0) f.kcal = n; } else if (k === 'k') { f.k = t.value; f.end = fastEnd(f.k) || f.end; save(); render(); return; } else f[k] = t.value; save(); }
     if (t.dataset.nut) { const n = num(t.value); if (!isNaN(n) && n > 0) { nut()[t.dataset.nut] = n; save(); } }
     if (t.dataset.aikey !== undefined) { try { const k = t.value.trim(); if (k) localStorage.setItem(AIKEY, k); else localStorage.removeItem(AIKEY); } catch (e) { } }
   });
