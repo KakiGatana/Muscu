@@ -95,8 +95,9 @@
   }
   const restTxt = s => s >= 60 ? (s % 60 ? `${Math.floor(s / 60)} min ${s % 60} s` : `${Math.floor(s / 60)} min`) : `${s} s`;
   const mmss = s => { const t = Math.max(0, Math.round(s)); return `${Math.floor(t / 60)}:${pad(t % 60)}`; };
-  const setsDone = ex => { const a = S.cur.sets[ex.id] || []; return ex.kind === 'c' ? (a[0] && a[0].d ? 1 : 0) : a.filter(x => x.d).length; };
-  const setsTotal = ex => ex.kind === 'c' ? 1 : (S.cur.sets[ex.id] || []).length;
+  const skipped = ex => !!(S.cur && S.cur.skip && ex.id in S.cur.skip);
+  const setsDone = ex => { if (skipped(ex)) return 0; const a = S.cur.sets[ex.id] || []; return ex.kind === 'c' ? (a[0] && a[0].d ? 1 : 0) : a.filter(x => x.d).length; };
+  const setsTotal = ex => skipped(ex) ? 0 : ex.kind === 'c' ? 1 : (S.cur.sets[ex.id] || []).length;
   const lastTxt = (l, e) => l.sets.map(s => (s.w !== '' && s.w != null && e.kind === 'w' ? fw(s.w) + '×' : '') + s.r).join(' · ');
 
   /* ---------- icônes ---------- */
@@ -278,6 +279,7 @@
   }
   function exCard(e, i, pr) {
     const sets = S.cur.sets[e.id], list = pr.ex;
+    if (skipped(e)) return `<article class="ex skip"><div class="row sp"><div class="grow"><h3>${esc(e.n)}</h3><div class="nt">Pas disponible${S.cur.skip[e.id] ? ' : ' + esc(S.cur.skip[e.id]) : ''}</div></div><button class="btn sm" data-act="unskip" data-ex="${e.id}">Rétablir</button></div></article>`;
     const chain = e.rest === 0 && e.kind !== 'c' && i < list.length - 1 && list[i + 1].sec === e.sec;
     const flags = (e.alert ? `<span class="chip warn">${ALERTS[e.alert] || esc(e.alert)}</span>` : '') + (e.hold ? '<span class="chip warn">Ne pas forcer</span>' : '') + (e.unit ? `<span class="chip">${esc(e.unit)}</span>` : '');
     const why = e.adj && e.adj.why ? `<details class="why"><summary>Pourquoi cette charge ?</summary><p>${esc(e.adj.why)}</p>
@@ -305,7 +307,7 @@
       ${e.note ? `<div class="nt">${esc(e.note)}</div>` : ''}
       <div class="lh">${flags}${lastChip}${hint}</div>${why}
       <div class="sets">${rows}</div>
-      <div class="ex-act"><button data-act="addSet" data-ex="${e.id}">+ série</button><button data-act="remSet" data-ex="${e.id}">− série</button></div></article>`;
+      <div class="ex-act"><button data-act="addSet" data-ex="${e.id}">+ série</button><button data-act="remSet" data-ex="${e.id}">− série</button><button data-act="skipEx" data-ex="${e.id}" style="margin-left:auto">Pas dispo</button></div></article>`;
   }
 
   /* ----- Suivi ----- */
@@ -318,7 +320,7 @@
     const hist = S.logs.slice().reverse().slice(0, 30).map(l => {
       const vol = l.ex.reduce((a, e) => a + e.sets.reduce((b, s) => b + (num(s.w) || 0) * (num(s.r) || 0), 0), 0);
       return `<details class="g hist"><summary><div class="grow"><b>${esc(l.name)}</b><div class="d">${fdate(l.date)} · ${l.dur} min · ${(vol / 1000).toFixed(1).replace('.', ',')} t${l.xp ? ' · +' + l.xp + ' XP' : ''}</div></div></summary>
-        <ul>${l.ex.filter(e => e.sets.length).map(e => `<li><b>${esc(e.n)}</b> — ${e.sets.map(s => (s.w !== '' && s.w != null ? fw(s.w) + '×' : '') + s.r).join(' · ')}</li>`).join('')}</ul>
+        <ul>${l.ex.filter(e => e.sets.length || e.skip != null).map(e => `<li><b>${esc(e.n)}</b> — ${e.skip != null ? 'pas disponible' + (e.skip ? ' : ' + esc(e.skip) : '') : e.sets.map(s => (s.w !== '' && s.w != null ? fw(s.w) + '×' : '') + s.r).join(' · ')}</li>`).join('')}</ul>
         ${l.coach ? `<p class="note" style="margin:0 15px 12px">${esc(l.coach)}</p>` : ''}
         <div style="padding:0 15px 13px"><button class="btn sm dng" data-act="logDel" data-id="${l.id}">Supprimer</button></div></details>`;
     }).join('');
@@ -797,19 +799,20 @@ Sans photo, estime à partir de la description : quand la quantité est vague (�
     else if (o.coreTotal && o.coreDone < o.coreTotal) s = pick(['Séance incomplète et le noyau n\'est pas terminé. Ça arrive. La prochaine fois, tu commences par le haut de la liste et tu ne lâches pas les deux premiers.',
       `${o.doneEx} exercice${o.doneEx > 1 ? 's' : ''} sur ${o.totalEx}, et le noyau n'est pas bouclé. Tu es venu, c'est déjà ça, mais ce sont les deux premiers mouvements qui font progresser.`]);
     else if (o.coreTotal && o.doneEx <= o.coreTotal) s = pick(['Noyau fait, le reste sauté. Ça reste une vraie séance de 20 minutes : l\'essentiel est là.',
-      'Tu as fait les deux mouvements qui comptent. Mieux vaut ça que rien, mais ne laisse pas les accessoires sauter trois fois de suite : tes épaules et ton tirage en ont besoin.']);
+      'Tu as fait le noyau, ce qui compte le plus. Mieux vaut ça que rien, mais ne laisse pas les accessoires sauter trois fois de suite : tes épaules et ton tirage en ont besoin.']);
     else s = pick([`${o.doneEx} exercices sur ${o.totalEx}, les plus importants d'abord. Tu as coupé par le bas, c'est la bonne façon de raccourcir.`,
       `${o.doneEx} exercices sur ${o.totalEx}. Bonne séance. Il manque la fin : si c'est le temps qui a manqué, enchaîne les supersets sans traîner la prochaine fois.`]);
+    if (o.skipped && o.skipped.length) s += ` ${o.skipped.join(' et ')} : pas disponible, c'est noté. Ça ne compte pas contre toi.`;
     if (o.records) s += o.records > 1 ? ` Et ${o.records} records au passage.` : ' Et un record au passage.';
     if (o.streak >= 3) s += ` ${o.streak} jours d'entraînement d'affilée : garde ce rythme.`;
     return s;
   }
   function finish() {
-    const pr = progById(S.cur.prog), spam = !!pr.spam, work = pr.ex.filter(e => e.kind !== 'c');
+    const pr = progById(S.cur.prog), spam = !!pr.spam, skip = S.cur.skip || {}, work = pr.ex.filter(e => e.kind !== 'c' && !(e.id in skip)), skippedEx = pr.ex.filter(e => e.id in skip);
     const nDone = e => (S.cur.sets[e.id] || []).filter(s => s.d).length, planned = e => Math.max(1, e.sets | 0);
-    const ex = pr.ex.map(e => ({
+    const ex = pr.ex.map(e => Object.assign(e.id in skip ? { skip: skip[e.id] || '' } : {}, {
       id: e.id, n: e.n,
-      sets: (e.kind === 'c' ? [] : (S.cur.sets[e.id] || [])).filter(s => s.d).map(s => ({ w: e.kind === 'w' ? (s.w === '' ? '' : (num(s.w) || '')) : '', r: s.r }))
+      sets: (e.kind === 'c' || e.id in skip ? [] : (S.cur.sets[e.id] || [])).filter(s => s.d).map(s => ({ w: e.kind === 'w' ? (s.w === '' ? '' : (num(s.w) || '')) : '', r: s.r }))
     }));
     const warm = pr.ex.filter(e => e.kind === 'c' && setsDone(e)).length;
     const allSets = work.reduce((n, e) => n + nDone(e), 0), xpSets = work.reduce((n, e) => n + Math.min(8, nDone(e)), 0);
@@ -827,9 +830,19 @@ Sans photo, estime à partir de la description : quand la quantité est vague (�
     const lvl0 = RPG.levelOf(totalXp());
     const log = { id: uid(), date: new Date().toISOString(), prog: pr.id, name: spam ? 'Spam · ' + pr.tag : pr.name, dur, ex, spam, pdc: !!pr.pdc, full, rec: doRecords.length };
     S.logs.push(log);
+    // la charge validée la plus lourde devient la charge de l'exercice pour les prochaines séances (dans toutes les séances où il figure)
+    const upd = [];
+    ex.forEach(e => {
+      const best = Math.max(0, ...e.sets.map(s => num(s.w) || 0)); if (!best) return;
+      S.programs.forEach(p => p.ex.forEach(x => {
+        if (x.kind !== 'w' || !(x.id === e.id || norm(x.n) === norm(e.n))) return;
+        const was = startW(x.start); if (was !== best && !upd.some(u => u.n === e.n)) upd.push({ n: e.n, was, w: best });
+        x.start = fw(best); x.startAt = Date.now() + 1000; x.est = false;
+      }));
+    });
     const streak = streakNow(), gain = RPG.sessionXp({ sets: xpSets, warm, full, records: doRecords.length, streak });
     log.xp = gain.xp; log.streak = streak; log.mult = gain.mult;
-    log.coach = coachLine({ sets: allSets, spam, pdc: !!pr.pdc, names: pr.tag, full, doneEx, totalEx: work.length, coreDone, coreTotal: core.length, records: doRecords.length, streak });
+    log.coach = coachLine({ sets: allSets, spam, pdc: !!pr.pdc, names: pr.tag, full, doneEx, totalEx: work.length, coreDone, coreTotal: core.length, records: doRecords.length, streak, skipped: skippedEx.map(e => e.n.replace(/^[A-Z]\d\s*·\s*/, '')) });
     const lvl1 = RPG.levelOf(totalXp()), newTier = RPG.tierIdx(lvl1) > RPG.tierIdx(lvl0), newZone = RPG.zoneIdx(lvl1) > RPG.zoneIdx(lvl0);
     S.cur = null; T = null; save();
     V.stack = []; V.tab = 'home'; render(); window.scrollTo(0, 0);
@@ -839,6 +852,7 @@ Sans photo, estime à partir de la description : quand la quantité est vague (�
       <div class="xpgain"><b>+${gain.xp} XP</b><span>${gain.base} × ${fw(gain.mult)} · série de ${streak}</span></div>
       ${lvl1 > lvl0 ? `<div class="lvlup">Niveau supérieur !${RPG.ZONES.some(z => z.m.some(x => x.boss && x.l > lvl0 && x.l <= lvl1)) ? ' Un boss t\'attend.' : ''}${newTier ? ' Une nouvelle tenue aussi.' : ''}${newZone ? ' Une nouvelle zone s\'ouvre.' : ''} Ouvre l'aventure pour y assister.</div>` : ''}
       ${doRecords.map(r => `<div class="rec"><span>${esc(r.n)}</span><span>${fw(r.was)} → <b>${fw(r.w)} kg</b></span></div>`).join('')}
+      ${upd.length ? `<div class="why" style="text-align:left;margin-bottom:8px"><b style="color:var(--a2)">Charges mises à jour pour la suite</b>${upd.map(u => `<p>${esc(u.n)} : ${u.was === '' ? '' : fw(u.was) + ' → '}<b>${fw(u.w)} kg</b></p>`).join('')}</div>` : ''}
       <div class="g2" style="margin-top:12px"><button class="btn" data-act="toAdv">Voir l'aventure</button><button class="btn pri" data-act="sheetX">Fermer</button></div></div>`);
   }
 
@@ -870,6 +884,14 @@ Sans photo, estime à partir de la description : quand la quantité est vague (�
   ];
   let swReg = null;
   const A = {
+    skipEx(t) {
+      const pr = progById(S.cur.prog), e = pr.ex.find(x => x.id === t.dataset.ex);
+      openSheet(`<h2>Pas disponible</h2><p class="mut" style="margin-bottom:12px;font-size:13.5px">${esc(e.n)} : l'exercice est retiré de cette séance et ne compte pas contre toi${e.key ? ', même s\'il fait partie du noyau' : ''}.</p>
+        <label class="f"><span>Commentaire (optionnel)</span><input class="fi" id="skc" placeholder="ex. rack pris, remplacé par la presse"></label>
+        <button class="btn pri xl" data-act="skipSave" data-ex="${e.id}">Noter</button>`);
+    },
+    skipSave(t) { S.cur.skip = S.cur.skip || {}; S.cur.skip[t.dataset.ex] = $('#skc').value.trim(); save(); closeSheet(); render(); },
+    unskip(t) { if (S.cur.skip) delete S.cur.skip[t.dataset.ex]; save(); render(); },
     titleSet(t) { S.title = S.title === t.dataset.v ? '' : t.dataset.v; save(); render(); },
     fastTog() { const f = fast(); f.on = !f.on; if (f.on && (!f.end || f.end < todayISO())) f.end = fastEnd(f.k); save(); render(); },
     async updCheck() {
