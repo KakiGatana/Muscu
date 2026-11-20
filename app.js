@@ -272,10 +272,17 @@
         <div class="grow" style="min-width:0"><h2>${esc(pr.name)} <span class="mut">${esc(pr.tag)}</span></h2></div>
         <span class="chip" id="elapsed">${mmss((Date.now() - S.cur.start) / 1000)}</span></div>
       <div class="prog-bar"><i style="width:${tot ? Math.round(dn / tot * 100) : 0}%"></i></div></div>
-      ${cards}
+      ${pr.id === '__spam' ? restRow(pr) : ''}${cards}
       ${pr.rule ? `<p class="note">${esc(pr.rule)}</p>` : ''}
       <button class="btn pri xl" data-act="finish" style="margin-top:10px">Terminer la séance · ${dn}/${tot}</button>
       <div style="height:${T ? 110 : 20}px"></div>`;
+  }
+  // minuteur de repos réglable pour les séances spam, poids du corps et perso
+  function restRow(pr) {
+    const cur = pr.ex.every(e => e.rest === pr.ex[0].rest) ? pr.ex[0].rest : 0;
+    return `<div class="card restrow"><div class="row sp"><div class="eyebrow">Repos entre les séries</div><button class="btn sm" data-act="restNow" data-s="${cur || 90}">Lancer</button></div>
+      <div class="chips trg" style="justify-content:flex-start;margin-top:8px">${[30, 45, 60, 90, 120, 180].map(s => `<button class="chip btnchip ${cur === s ? 'ok' : ''}" data-act="restSet" data-s="${s}">${restTxt(s)}</button>`).join('')}</div>
+      <p class="mut" style="font-size:12px;margin-top:8px">Le minuteur démarre tout seul chaque fois que tu valides une série. Sonnerie et vibration à la fin.</p></div>`;
   }
   function exCard(e, i, pr) {
     const sets = S.cur.sets[e.id], list = pr.ex;
@@ -907,6 +914,8 @@ Sans photo, estime à partir de la description : quand la quantité est vague (�
   }
   const persoKeep = () => { document.querySelectorAll('[data-pp]').forEach(c => { const i = PER.sel.indexOf(c.dataset.pp); if (c.checked && i < 0) PER.sel.push(c.dataset.pp); if (!c.checked && i >= 0) PER.sel.splice(i, 1); }); const n = parseInt(($('#ppn') || {}).value); if (n > 0) PER.n = n; };
   const A = {
+    restSet(t) { const s = +t.dataset.s; S.opts.spamRest = s; progById(S.cur.prog).ex.forEach(e => { e.rest = s; }); if (T && !T.done) { T.end = Date.now() + s * 1000; T.total = s; } save(); render(); },
+    restNow(t) { unlockAudio(); startTimer(+t.dataset.s, 'Repos'); render(); },
     perso() { PER.sel = []; persoSheet(); },
     perSet(t) { persoKeep(); if (t.dataset.k === 'loc' && PER.loc !== t.dataset.v) PER.sel = []; PER[t.dataset.k] = t.dataset.v; persoSheet(); },
     async persoGo() {
@@ -923,7 +932,7 @@ Sans photo, estime à partir de la description : quand la quantité est vague (�
       if (S.cur && !await ask('Une séance est déjà en cours. L\'abandonner ?', 'Abandonner')) return;
       const prog = { id: '__spam', spam: !home, pdc: home, name: 'Séance perso', tag: ex.length <= 2 ? ex.map(e => e.n).join(' + ') : ex.length + ' exercices', dur: 'libre', ex };
       S.cur = { prog: '__spam', spamProg: prog, start: Date.now(), sets: {} };
-      prog.ex.forEach(e => { S.cur.sets[e.id] = initSets(e); });
+      prog.ex.forEach(e => { S.cur.sets[e.id] = initSets(e); if (S.opts.spamRest) e.rest = S.opts.spamRest; });
       save(); T = null; go({ t: 'work' });
     },
     skipEx(t) {
@@ -1022,7 +1031,7 @@ Sans photo, estime à partir de la description : quand la quantité est vague (�
       if (S.cur && !await ask('Une séance est déjà en cours. L\'abandonner ?', 'Abandonner')) return;
       const prog = { id: '__spam', pdc: true, name: 'Poids du corps', tag: ex.length + ' exercice' + (ex.length > 1 ? 's' : ''), dur: 'libre', ex };
       S.cur = { prog: '__spam', spamProg: prog, start: Date.now(), sets: {} };
-      prog.ex.forEach(e => { S.cur.sets[e.id] = initSets(e); });
+      prog.ex.forEach(e => { S.cur.sets[e.id] = initSets(e); if (S.opts.spamRest) e.rest = S.opts.spamRest; });
       save(); T = null; go({ t: 'work' });
     },
     toAdv() { closeSheet(); setTab('adv'); },
@@ -1049,7 +1058,7 @@ Sans photo, estime à partir de la description : quand la quantité est vague (�
       picked.forEach(e => { e.n = e.n.replace(/^[A-Z]\d\s*·\s*/, ''); e.sets = n; e.sec = 'Spam'; e.key = false; e.rest = e.rest || 120; });
       const prog = { id: '__spam', spam: true, name: 'Spam', tag: picked.map(e => e.n).join(' + '), dur: 'libre', ex: picked };
       S.cur = { prog: '__spam', spamProg: prog, start: Date.now(), sets: {} };
-      prog.ex.forEach(e => { S.cur.sets[e.id] = initSets(e); });
+      prog.ex.forEach(e => { S.cur.sets[e.id] = initSets(e); if (S.opts.spamRest) e.rest = S.opts.spamRest; });
       save(); T = null; go({ t: 'work' });
     },
     tab(t) { setTab(t.dataset.t); },
