@@ -372,3 +372,5 @@ textarea.fi{resize:vertical;font-family:inherit}
 .ttl{font-family:var(--mono);font-size:12px;color:#d6ccff;letter-spacing:.06em;margin-top:2px;text-shadow:0 0 10px rgba(139,108,255,.6)}
 
 .ex.skip{opacity:.6;border-style:dashed}
+
+.alt .btn.spam.wide{grid-column:1 / -1}

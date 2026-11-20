@@ -180,7 +180,7 @@
     const nudge = (S.logs.length >= 3 && Date.now() - (S.lastBackup || 0) > 14 * 864e5)
       ? `<div class="card nudge"><div><b>Sauvegarde conseillée</b><p class="mut">${S.lastBackup ? 'Dernière il y a ' + Math.round((Date.now() - S.lastBackup) / 864e5) + ' jours.' : 'Aucune sauvegarde pour l\'instant.'}</p></div><button class="btn sm" data-act="export">Exporter</button></div>` : '';
     const xp = totalXp(), Lr = RPG.levelOf(xp), L = seenLvl(Lr), pending = Lr > L, xa = RPG.need(L), xb = RPG.need(L + 1), stk = streakNow();
-    const spamBtn = hasCur ? '' : `<div class="g2 alt"><button class="btn ghost spam" data-act="spam"><small>Salle bondée</small>Séance spam</button><button class="btn ghost spam" data-act="pdc"><small>Pas de salle</small>Poids du corps</button></div>`;
+    const spamBtn = hasCur ? '' : `<div class="g2 alt"><button class="btn ghost spam" data-act="spam"><small>Salle bondée</small>Séance spam</button><button class="btn ghost spam" data-act="pdc"><small>Pas de salle</small>Poids du corps</button><button class="btn ghost spam wide" data-act="perso"><small>Sur le tas</small>Séance perso</button></div>`;
     const adv = `<button class="card advstrip" data-act="tab" data-t="adv"><canvas data-me class="px" width="40" height="48"></canvas>
       <div class="grow"><div class="eyebrow">Niveau ${L} · ${RPG.TIERS[RPG.tierIdx(L)].t}</div><div class="xp"><i style="width:${Math.min(100, L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div>
       <p class="mut">${pending ? '<b class="pend">Niveau supérieur ! Ouvre l\'aventure</b>' : L >= RPG.MAX ? 'Niveau maximum' : (xp - xa) + ' / ' + (xb - xa) + ' XP'}${stk > 1 ? ' · série de ' + stk : ''}</p></div>${svg('go', 'go')}</button>`;
@@ -828,7 +828,7 @@ Sans photo, estime à partir de la description : quand la quantité est vague (�
     const dur = Math.max(1, Math.round((Date.now() - S.cur.start) / 60000));
     const vol = ex.reduce((a, e) => a + e.sets.reduce((b, s) => b + (num(s.w) || 0) * (num(s.r) || 0), 0), 0);
     const lvl0 = RPG.levelOf(totalXp());
-    const log = { id: uid(), date: new Date().toISOString(), prog: pr.id, name: spam ? 'Spam · ' + pr.tag : pr.name, dur, ex, spam, pdc: !!pr.pdc, full, rec: doRecords.length };
+    const log = { id: uid(), date: new Date().toISOString(), prog: pr.id, name: spam ? 'Spam · ' + pr.tag : pr.name === 'Séance perso' ? 'Perso · ' + pr.tag : pr.name, dur, ex, spam, pdc: !!pr.pdc, full, rec: doRecords.length };
     S.logs.push(log);
     // la charge validée la plus lourde devient la charge de l'exercice pour les prochaines séances (dans toutes les séances où il figure)
     const upd = [];
@@ -883,7 +883,49 @@ Sans photo, estime à partir de la description : quand la quantité est vague (�
     ['pdc_burpees', 'Burpees', '10', 60, 'Sans saut si le genou proteste', 'genou']
   ];
   let swReg = null;
+  // séance perso : lieu (salle ou maison), zone, exercices au choix, autant de séries qu'on veut
+  const PZ = { pdc_pompes: 'haut', pdc_pompes_sur: 'haut', pdc_tractions: 'haut', pdc_row: 'haut', pdc_pike: 'haut', pdc_squats: 'bas', pdc_bulgares: 'bas', pdc_fentes: 'bas', pdc_pont: 'bas',
+    pdc_planche: 'abdos', pdc_lateral: 'abdos', pdc_releves: 'abdos', pdc_superman: 'abdos', pdc_climbers: 'abdos', pdc_burpees: 'autre' };
+  const zoneOf = (n, pid) => /crunch|relev|gainage|planche|bird|superman|climber/i.test(n) ? 'abdos' : /^haut/.test(pid) ? 'haut' : /^bas/.test(pid) ? 'bas' : 'autre';
+  const PER = { loc: 'home', zone: 'haut', sel: [], n: 6 };
+  function persoList() {
+    if (PER.loc === 'home') return PDC.map(e => ({ id: e[0], n: e[1], reps: e[2], z: PZ[e[0]] || 'tout' }));
+    const seen = {}, out = [];
+    S.programs.forEach(p => p.ex.forEach(e => { const k = norm(e.n); if (e.kind !== 'c' && !seen[k]) { seen[k] = 1; out.push({ id: e.id, n: e.n.replace(/^[A-Z]\d\s*·\s*/, ''), reps: e.reps, z: zoneOf(e.n, p.id) }); } }));
+    return out;
+  }
+  function persoSheet() {
+    const list = persoList().filter(e => PER.zone === 'tout' || e.z === PER.zone);
+    const chip = (k, v, l) => `<button class="chip btnchip ${PER[k] === v ? 'ok' : ''}" data-act="perSet" data-k="${k}" data-v="${v}">${l}</button>`;
+    openSheet(`<h2>Séance perso</h2><p class="mut" style="margin-bottom:12px;font-size:13.5px">Choisis un ou deux exercices et enchaîne les séries, ou compose ce que tu veux. Ça compte pour l'XP et la série de jours.</p>
+      <div class="chips trg" style="justify-content:flex-start;margin-bottom:8px">${chip('loc', 'home', 'À la maison')}${chip('loc', 'gym', 'À la salle')}</div>
+      <div class="chips trg" style="justify-content:flex-start;margin-bottom:12px">${chip('zone', 'haut', 'Haut du corps')}${chip('zone', 'bas', 'Bas du corps')}${chip('zone', 'abdos', 'Abdos')}${chip('zone', 'tout', 'Tout')}</div>
+      <div class="picks">${list.map(e => `<label class="pickrow"><input type="checkbox" data-pp="${e.id}" ${PER.sel.indexOf(e.id) >= 0 ? 'checked' : ''}><span>${esc(e.n)} <small class="mut">· ${esc(e.reps)}</small></span></label>`).join('') || '<p class="empty">Aucun exercice dans cette zone.</p>'}</div>
+      <div class="g2" style="margin-top:12px"><label class="f"><span>Autre exercice</span><input class="fi" id="ppx" placeholder="ex. Pompes diamant"></label>
+      <label class="f"><span>Séries par exercice</span><input class="fi" id="ppn" inputmode="numeric" value="${PER.n}"></label></div>
+      <button class="btn pri xl" data-act="persoGo">Commencer</button>`);
+  }
+  const persoKeep = () => { document.querySelectorAll('[data-pp]').forEach(c => { const i = PER.sel.indexOf(c.dataset.pp); if (c.checked && i < 0) PER.sel.push(c.dataset.pp); if (!c.checked && i >= 0) PER.sel.splice(i, 1); }); const n = parseInt(($('#ppn') || {}).value); if (n > 0) PER.n = n; };
   const A = {
+    perso() { PER.sel = []; persoSheet(); },
+    perSet(t) { persoKeep(); if (t.dataset.k === 'loc' && PER.loc !== t.dataset.v) PER.sel = []; PER[t.dataset.k] = t.dataset.v; persoSheet(); },
+    async persoGo() {
+      persoKeep();
+      const n = Math.min(15, Math.max(1, PER.n || 6)), home = PER.loc === 'home', ex = [];
+      PER.sel.forEach(id => {
+        if (home) { const e = PDC.find(x => x[0] === id); if (e) { const d = { id: e[0], n: e[1], reps: e[2], rest: e[3], note: e[4], kind: 'b', sets: n, sec: 'Séance perso', key: false, start: '' }; if (e[5]) d.alert = e[5]; ex.push(d); } }
+        else for (const p of S.programs) { const e = p.ex.find(x => x.id === id); if (e) { const d = clone(e); d.n = d.n.replace(/^[A-Z]\d\s*·\s*/, ''); d.sets = n; d.sec = 'Séance perso'; d.key = false; d.rest = d.rest || 120; ex.push(d); break; } }
+      });
+      const other = $('#ppx').value.trim();
+      if (other) ex.push({ id: (home ? 'pdc_x_' : 'x_') + norm(other).replace(/ /g, '_'), n: other, reps: 'max', rest: home ? 60 : 120, note: '', kind: home ? 'b' : 'w', sets: n, sec: 'Séance perso', key: false, start: '' });
+      if (!ex.length) { toast('Choisis au moins un exercice'); return; }
+      closeSheet();
+      if (S.cur && !await ask('Une séance est déjà en cours. L\'abandonner ?', 'Abandonner')) return;
+      const prog = { id: '__spam', spam: !home, pdc: home, name: 'Séance perso', tag: ex.length <= 2 ? ex.map(e => e.n).join(' + ') : ex.length + ' exercices', dur: 'libre', ex };
+      S.cur = { prog: '__spam', spamProg: prog, start: Date.now(), sets: {} };
+      prog.ex.forEach(e => { S.cur.sets[e.id] = initSets(e); });
+      save(); T = null; go({ t: 'work' });
+    },
     skipEx(t) {
       const pr = progById(S.cur.prog), e = pr.ex.find(x => x.id === t.dataset.ex);
       openSheet(`<h2>Pas disponible</h2><p class="mut" style="margin-bottom:12px;font-size:13.5px">${esc(e.n)} : l'exercice est retiré de cette séance et ne compte pas contre toi${e.key ? ', même s\'il fait partie du noyau' : ''}.</p>
