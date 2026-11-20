@@ -111,7 +111,7 @@
     up: '<path d="M6 15l6-6 6 6"/>', down: '<path d="M6 9l6 6 6-6"/>',
     trash: '<path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/>',
     edit: '<path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4"/>',
-    check: '<path d="M4 12l5 5L20 6"/>', fork: '<path d="M7 3v8a2 2 0 002 2v8M5 3v5M9 3v5M17 3c-2 2-3 5-3 8h3v10"/>', sword: '<path d="M20 4L9.5 14.5M20 4h-5M20 4v5M6.5 11.5l6 6M8 16l-4 4"/>', plus: '<path d="M12 5v14M5 12h14"/>', copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10a1 1 0 001 1h3"/>'
+    check: '<path d="M4 12l5 5L20 6"/>', play: '<path d="M7 4l13 8-13 8z"/>', fork: '<path d="M7 3v8a2 2 0 002 2v8M5 3v5M9 3v5M17 3c-2 2-3 5-3 8h3v10"/>', sword: '<path d="M20 4L9.5 14.5M20 4h-5M20 4v5M6.5 11.5l6 6M8 16l-4 4"/>', plus: '<path d="M12 5v14M5 12h14"/>', copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 00-1-1H5a1 1 0 00-1 1v10a1 1 0 001 1h3"/>'
   };
   const svg = (n, cls = '') => `<svg class="${cls}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${I[n]}</svg>`;
 
@@ -284,6 +284,7 @@
       <div class="chips trg" style="justify-content:flex-start;margin-top:8px">${[30, 45, 60, 90, 120, 180].map(s => `<button class="chip btnchip ${cur === s ? 'ok' : ''}" data-act="restSet" data-s="${s}">${restTxt(s)}</button>`).join('')}</div>
       <p class="mut" style="font-size:12px;margin-top:8px">Le minuteur démarre tout seul chaque fois que tu valides une série. Sonnerie et vibration à la fin.</p></div>`;
   }
+  const secsOf = r => { const m = String(r || '').match(/(\d+)(?:\s*-\s*(\d+))?\s*(s|sec|min)\b/i); return m ? +(m[2] || m[1]) * (/^min/i.test(m[3]) ? 60 : 1) : 0; };
   function exCard(e, i, pr) {
     const sets = S.cur.sets[e.id], list = pr.ex;
     if (skipped(e)) return `<article class="ex skip"><div class="row sp"><div class="grow"><h3>${esc(e.n)}</h3><div class="nt">Pas disponible${S.cur.skip[e.id] ? ' : ' + esc(S.cur.skip[e.id]) : ''}</div></div><button class="btn sm" data-act="unskip" data-ex="${e.id}">Rétablir</button></div></article>`;
@@ -304,9 +305,11 @@
         hint = `<button class="chip ok btnchip" data-act="bump" data-ex="${e.id}" data-inc="${inc}">Fourchette atteinte · passer à +${fw(inc)} kg</button>`;
     }
     const lastChip = l ? `<span class="chip">Dernière fois : ${lastTxt(l, e)}</span>` : (e.kind === 'w' && e.start ? `<span class="chip">Départ : ${esc(e.start)} kg${e.est ? ' (estimé)' : ''}</span>` : '');
-    const rows = sets.map((s, k) => `<div class="set ${e.kind === 'b' ? 'nw' : ''} ${s.d ? 'dn' : ''}"><div class="i">${k + 1}</div>
+    const tsec = secsOf(e.reps);
+    const rows = sets.map((s, k) => `<div class="set ${e.kind === 'b' ? 'nw' : ''} ${tsec ? 'tw' : ''} ${s.d ? 'dn' : ''}"><div class="i">${k + 1}</div>
       ${e.kind === 'w' ? `<div class="unit" data-u="kg"><input class="in" inputmode="decimal" data-sk="w" data-ex="${e.id}" data-i="${k}" value="${esc(fw(s.w))}" placeholder="kg"></div>` : ''}
       <div class="unit" data-u="${e.kind === 'w' ? 'reps' : ''}"><input class="in" inputmode="decimal" data-sk="r" data-ex="${e.id}" data-i="${k}" value="${esc(s.r)}" placeholder="${esc(e.reps)}"></div>
+      ${tsec ? `<button class="chk chr" data-act="chrono" data-ex="${e.id}" data-i="${k}" aria-label="Lancer le chrono">${svg('play')}</button>` : ''}
       <button class="chk ${s.d ? 'on' : ''}" data-act="tick" data-ex="${e.id}" data-i="${k}" aria-label="Valider la série">${svg('check')}</button></div>`).join('');
     return `<article class="ex ${e.key ? 'key' : ''} ${chain ? 'chain' : ''}">
       <div class="row sp" style="align-items:flex-start"><div class="grow"><h3>${esc(e.n)}</h3>
@@ -744,7 +747,16 @@ Sans photo, estime à partir de la description : quand la quantité est vague (�
       });
     } catch (e) { }
   }
-  function startTimer(sec, label) { T = { end: Date.now() + sec * 1000, total: sec, label, done: false }; updateTimerUI(); }
+  function startTimer(sec, label, work) { T = { end: Date.now() + sec * 1000, start: Date.now(), total: sec, label, done: false, work: work || null }; $('#timer').innerHTML = ''; updateTimerUI(); }
+  // fin d'un effort chronométré : la durée tenue va dans le champ, la série est validée, le repos démarre
+  function workDone(w, secs) {
+    T = null; $('#timer').innerHTML = '';
+    const pr = S.cur && progById(S.cur.prog), e = pr && pr.ex.find(x => x.id === w.ex), s = e && S.cur.sets[e.id][w.i];
+    if (!s) { updateTimerUI(); return; }
+    s.r = Math.round(secs); s.d = true; save();
+    if (e.rest > 0) startTimer(e.rest, e.n); else updateTimerUI();
+    render();
+  }
   function updateTimerUI() {
     const el = $('#timer');
     if (!T) { el.classList.remove('show'); return; }
@@ -752,16 +764,18 @@ Sans photo, estime à partir de la description : quand la quantité est vague (�
     el.classList.add('show');
     if (!$('.tm', el)) {
       el.innerHTML = `<div class="tm"><div class="bar"><i></i></div><div class="row sp"><div class="row" style="gap:14px;min-width:0"><div class="t" id="tt"></div><div style="min-width:0"><small id="tl">REPOS</small><b>${esc(T.label)}</b></div></div>
-        <div class="row" style="gap:6px"><button class="btn" data-act="tm" data-d="-15">−15</button><button class="btn" data-act="tm" data-d="15">+15</button><button class="btn" data-act="tmx" aria-label="Fermer">×</button></div></div></div>`;
+        <div class="row" style="gap:6px">${T.work ? '<button class="btn" data-act="workStop">Stop</button>' : '<button class="btn" data-act="tm" data-d="-15">−15</button><button class="btn" data-act="tm" data-d="15">+15</button>'}<button class="btn" data-act="tmx" aria-label="Fermer">×</button></div></div></div>`;
     }
     $('#tt').textContent = mmss(Math.ceil(left));
     $('.bar i', el).style.width = (T.done ? 100 : (100 - left / T.total * 100)) + '%';
     $('.tm', el).classList.toggle('go', T.done);
-    $('#tl').textContent = T.done ? 'REPRENDS' : 'REPOS';
+    $('#tl').textContent = T.work ? 'EFFORT · TIENS' : T.done ? 'REPRENDS' : 'REPOS';
+    $('.tm', el).classList.toggle('work', !!T.work);
   }
   setInterval(() => {
     if (T) {
-      if (!T.done && T.end <= Date.now()) { T.done = true; T.doneAt = Date.now(); beep(); }
+      if (T.work && T.end <= Date.now()) { beep(); workDone(T.work, T.total); }
+      else if (!T.done && T.end <= Date.now()) { T.done = true; T.doneAt = Date.now(); beep(); }
       if (T.done && Date.now() - T.doneAt > 4000) { T = null; $('#timer').innerHTML = ''; }
       updateTimerUI();
     }
@@ -914,6 +928,14 @@ Sans photo, estime à partir de la description : quand la quantité est vague (�
   }
   const persoKeep = () => { document.querySelectorAll('[data-pp]').forEach(c => { const i = PER.sel.indexOf(c.dataset.pp); if (c.checked && i < 0) PER.sel.push(c.dataset.pp); if (!c.checked && i >= 0) PER.sel.splice(i, 1); }); const n = parseInt(($('#ppn') || {}).value); if (n > 0) PER.n = n; };
   const A = {
+    chrono(t) {
+      unlockAudio();
+      const pr = progById(S.cur.prog), e = pr.ex.find(x => x.id === t.dataset.ex), s = S.cur.sets[e.id][+t.dataset.i];
+      const sec = num(s.r) > 0 ? num(s.r) : secsOf(e.reps);   // la valeur du champ prime : tu peux changer la durée visée
+      if (S.opts.vib && navigator.vibrate) navigator.vibrate(30);
+      startTimer(sec, e.n + ' · série ' + (+t.dataset.i + 1), { ex: e.id, i: +t.dataset.i });
+    },
+    workStop() { if (!T || !T.work) return; const el = (Date.now() - T.start) / 1000; if (el < 2) { A.tmx(); return; } workDone(T.work, el); },
     restSet(t) { const s = +t.dataset.s; S.opts.spamRest = s; progById(S.cur.prog).ex.forEach(e => { e.rest = s; }); if (T && !T.done) { T.end = Date.now() + s * 1000; T.total = s; } save(); render(); },
     restNow(t) { unlockAudio(); startTimer(+t.dataset.s, 'Repos'); render(); },
     perso() { PER.sel = []; persoSheet(); },

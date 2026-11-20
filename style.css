@@ -374,3 +374,11 @@ textarea.fi{resize:vertical;font-family:inherit}
 .ex.skip{opacity:.6;border-style:dashed}
 
 .alt .btn.spam.wide{grid-column:1 / -1}
+
+/* chrono des exercices en temps */
+.set.tw{grid-template-columns:24px 1fr 1fr 48px 48px}
+.set.nw.tw{grid-template-columns:24px 1fr 48px 48px}
+.chk.chr svg{opacity:1;transform:none;stroke:var(--a2);fill:rgba(77,163,255,.25);stroke-width:2}
+.tm.work{border-color:var(--v);box-shadow:0 12px 40px rgba(0,0,0,.7),0 0 26px rgba(139,108,255,.55)}
+.tm.work .bar i{background:var(--v);box-shadow:0 0 8px var(--v)}
+.tm.work .t{text-shadow:0 0 14px rgba(139,108,255,.8)}
