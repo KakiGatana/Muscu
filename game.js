@@ -169,9 +169,53 @@
   }
   // apparence choisie : tenue et arme parmi celles débloquées (sinon les dernières obtenues)
   let LOOK = { o: null, w: null };
+  // équipements spéciaux, débloqués par des succès (indices 15 et plus, à la suite des 15 rangs)
+  const XO = [
+    ['Survêtement', { h: '#4a2e1a', t: '#1a1a22', a: '#1a1a22', b: '#f4f4f4', p: '#1a1a22', o: '#f4f4f4' }],
+    ['Kimono de combattant', { h: '#4a2e1a', t: '#f2efe6', a: '#f2efe6', b: '#111111', p: '#f2efe6', o: '#2a2a2a' }],
+    ['Robe du moine guerrier', { h: '#4a2e1a', t: '#d9771f', a: '#d9771f', b: '#7a3a10', p: '#d9771f', o: '#5a3a20', scarf: '#b85a10' }],
+    ['Armure de samouraï', { h: '#1a1010', plume: '#e0b04a', t: '#a01f1f', a: '#7a1515', b: '#e0b04a', p: '#2a1a1a', o: '#1a1010' }],
+    ['Armure de givre', { h: '#e6f4ff', t: '#9ad6ff', a: '#6fb0e6', b: '#ffffff', p: '#5a8ac0', o: '#3a5a8a', cape: '#cfeaff', aura: '#9ad6ff' }],
+    ['Manteau du monarque', { h: '#0d0d14', e: '#b9a5ff', s: '#c9b0b8', t: '#14141e', a: '#14141e', b: '#8b6cff', p: '#0d0d14', o: '#07070b', cape: '#1a0f30', aura: '#8b6cff' }],
+    ['Écailles de dragon', { h: '#7a1f1f', plume: '#ff8a2a', t: '#8a1f1f', a: '#d9a441', b: '#ffd76a', p: '#5a1414', o: '#2a0a0a', wings: '#7a1f1f' }],
+    ['Tenue royale', { h: '#4a2e1a', plume: '#ffd76a', halo: 1, t: '#5a2a8a', a: '#e0b04a', b: '#ffd76a', p: '#3a1a5a', o: '#e0b04a', cape: '#a82828' }]
+  ];
+  const XW = [
+    ['Haltère', { k: 'db', c: '#2a2a30', sh: '#9aa0a6' }], ['Katana', { len: 9, c: '#eef2f6' }], ['Lance', { k: 'spear', c: '#d7dde3', sh: '#6b4a2b' }],
+    ['Barre olympique', { k: 'bar', c: '#1c1c22', sh: '#c8ccd2' }], ['Marteau de guerre', { k: 'hammer', c: '#6a6f78', sh: '#5a3a20' }],
+    ['Faux de l\'ombre', { k: 'scythe', c: '#b388ff', sh: '#2a2030', glow: 1 }], ['Lame de givre', { len: 9, c: '#bfeaff', glow: 1, thick: 1 }], ['Lames du chasseur', { len: 8, c: '#4da3ff', glow: 1, dual: 1 }]
+  ];
+  XO.forEach(x => HP.push(Object.assign({ s: SKIN, e: EYE, w: HP[0].w }, x[1])));
+  const NT = 15;
   function lookP(tier) {
-    const o = LOOK.o != null && LOOK.o <= tier ? LOOK.o : tier, wv = LOOK.w != null && LOOK.w <= tier ? LOOK.w : tier;
-    return wv === o ? HP[o] : Object.assign({}, HP[o], { w: HP[wv].w });
+    const ok = v => v != null && (v >= NT || v <= tier);
+    const o = ok(LOOK.o) ? LOOK.o : tier, wv = ok(LOOK.w) ? LOOK.w : tier;
+    const w = wv >= NT ? XW[wv - NT][1] : HP[wv].w;
+    return w === HP[o].w ? HP[o] : Object.assign({}, HP[o], { w });
+  }
+  // armes spéciales en pixel : a = distance depuis la main dans l'axe de l'arme, b = décalage perpendiculaire
+  function pxSpecial(w, y, sc, hx, atk) {
+    const P = (a, b, len, th, col) => atk ? R(col, hx + a * sc, y + 7 * sc + b * sc, len * sc, th * sc) : R(col, hx + b * sc, y + 7 * sc - (a + len) * sc, th * sc, len * sc);
+    if (w.glow) { g.shadowColor = w.c; g.shadowBlur = 8; }
+    if (w.k === 'db') { P(-1, 0, 4, 1, w.sh); P(-2, -1, 1, 3, w.c); P(3, -1, 1, 3, w.c); }
+    else if (w.k === 'bar') { P(-4, 0, 17, 1, w.sh); P(-6, -2, 2, 5, w.c); P(9, -2, 2, 5, w.c); P(11, -1, 1, 3, '#3a3a42'); }
+    else if (w.k === 'spear') { P(-3, 0, 13, 1, w.sh); P(10, -1, 2, 3, w.c); P(12, 0, 1, 1, w.c); }
+    else if (w.k === 'hammer') { P(-2, 0, 9, 1, w.sh); P(6, -2, 3, 5, w.c); P(6, -2, 3, 1, '#9aa0a8'); }
+    else if (w.k === 'scythe') { P(-3, 0, 13, 1, w.sh); P(9, 1, 1, 5, w.c); P(8, 5, 1, 2, w.c); P(7, 6, 1, 1, w.c); }
+    g.shadowBlur = 0;
+  }
+  function realSpecial(w, hxh, hyh, dx, dy) {
+    const U = 1.9, pt = (a, b) => [hxh + dx * a * U - dy * b * U, hyh + dy * a * U + dx * b * U];
+    const seg = (a0, a1, b, wd, col) => { const p0 = pt(a0, b), p1 = pt(a1, b); g.strokeStyle = col; g.lineWidth = wd; g.beginPath(); g.moveTo(p0[0], p0[1]); g.lineTo(p1[0], p1[1]); g.stroke(); };
+    const poly = ps => { g.beginPath(); ps.forEach((p, i) => { const q = pt(p[0], p[1]); if (i) g.lineTo(q[0], q[1]); else g.moveTo(q[0], q[1]); }); g.closePath(); g.fill(); };
+    g.lineCap = 'butt';
+    if (w.glow) { g.shadowColor = w.c; g.shadowBlur = 12; }
+    if (w.k === 'db') { seg(-1, 3, 0, 1.1, w.sh); seg(-2.2, -1, 0, 5, w.c); seg(3, 4.2, 0, 5, w.c); seg(-2.2, -1, -2, .5, 'rgba(255,255,255,.3)'); }
+    else if (w.k === 'bar') { seg(-6, 13, 0, .9, w.sh); seg(-6.5, -4.5, 0, 7, w.c); seg(9, 11, 0, 7, w.c); seg(11, 12, 0, 5, '#3a3a42'); }
+    else if (w.k === 'spear') { seg(-3, 10, 0, 1, w.sh); g.fillStyle = w.c; poly([[10, -1.4], [14, 0], [10, 1.4]]); seg(9.6, 10.2, 0, 2.6, '#c8a04a'); }
+    else if (w.k === 'hammer') { seg(-2, 7, 0, 1.2, w.sh); seg(6, 9.5, 0, 7, w.c); seg(6, 9.5, -2.8, .8, 'rgba(255,255,255,.35)'); }
+    else if (w.k === 'scythe') { seg(-3, 11, 0, 1, w.sh); g.fillStyle = w.c; poly([[11, .2], [11.5, 3.5], [9.5, 7], [7, 8], [9.5, 4.5], [10.2, .8]]); }
+    g.shadowBlur = 0; g.lineCap = 'round';
   }
   const WEAPONS = ['Fourche', 'Dague', 'Épée courte', 'Épée', 'Épée longue', 'Épée longue dorée', 'Deux dagues d\'ombre', 'Lame d\'énergie', 'Espadon de flammes', 'Lame sacrée', 'Lames d\'ombre', 'Lame du vide', 'Lame solaire', 'Lame d\'aurore', 'Lame de lumière pure'];
   function drawHero(x, y, sc, tier, frame, atk, t) {
@@ -188,6 +232,7 @@
     if (P.plume) { R(P.plume, x + 3 * sc, y - 2 * sc, sc, 2 * sc); R(P.plume, x + 2 * sc, y - 2 * sc, sc, sc); }
     if (P.halo) R('#fff3b0', x + 2 * sc, y - (P.plume ? 4 : 2) * sc, 6 * sc, Math.max(1, sc / 2));
     if (P.shield) { R(P.shield, x - sc, y + 6 * sc, 3 * sc, 4 * sc); R('rgba(255,255,255,.35)', x, y + 7 * sc, sc, sc); R('rgba(0,0,0,.3)', x - sc, y + 9 * sc, 3 * sc, sc); }
+    if (w.k && w.k !== 'fork') { pxSpecial(w, y, sc, hx, atk); return; }
     if (w.k === 'fork') {
       if (atk) { R('#8a6a3f', x + 6 * sc, y + 7 * sc, 9 * sc, sc); R('#9aa0a6', x + 15 * sc, y + 6 * sc, sc, 3 * sc); R('#9aa0a6', x + 16 * sc, y + 6 * sc, sc, sc); R('#9aa0a6', x + 16 * sc, y + 8 * sc, sc, sc); R('#9aa0a6', x + 16 * sc, y + 7 * sc, sc, sc); }
       else { R('#8a6a3f', hx, y - sc, sc, 13 * sc); R('#9aa0a6', hx - sc, y - 2 * sc, 3 * sc, sc); R('#9aa0a6', hx - sc, y - 3 * sc, sc, sc); R('#9aa0a6', hx + sc, y - 3 * sc, sc, sc); R('#9aa0a6', hx, y - 3 * sc, sc, sc); }
@@ -1136,6 +1181,7 @@
       line(hxh + dx * 15 + dy * 1.6, hyh + dy * 15 - dx * 1.6, hxh + dx * 15 - dy * 1.6, hyh + dy * 15 + dx * 1.6);
       return;
     }
+    if (w.k) { realSpecial(w, hxh, hyh, dx, dy); return; }
     const L = w.len * 1.9 + 3;
     if (atk) { g.strokeStyle = rgba(w.c, .35); g.lineWidth = 2.6; g.beginPath(); g.arc(hxh, hyh, L - 1, an - 1.2, an); g.stroke(); }
     if (w.glow) { g.shadowColor = w.c; g.shadowBlur = 12; }
@@ -1378,5 +1424,5 @@
     drawHero(11, 19, 2, tierIdx(level), 0, false, 0);
   }
 
-  window.RPG = { MAX, need, levelOf, streakMult, sessionXp, TIERS, ZONES, tierIdx, zoneIdx, SMOKE: { n: 'Démon de fumée', l: 1, s: 'ghost', sc: 3, p: gh('#8a8f96', '#ff5d73', '#2a2a30'), fly: true, boss: true }, buildQueue, start, stop, setMode, setBody: b => { BODY = b || 'ok'; }, setLook: (o, w) => { LOOK = { o: o == null ? null : +o, w: w == null ? null : +w }; }, WEAPONS, setSmoke: v => { SMK = Math.max(0, Math.min(1, +v || 0)); }, portrait, tick: dt => { const s = st; if (s) { update(s, dt); if (st === s) draw(s); } } };
+  window.RPG = { MAX, need, levelOf, streakMult, sessionXp, TIERS, ZONES, tierIdx, zoneIdx, SMOKE: { n: 'Démon de fumée', l: 1, s: 'ghost', sc: 3, p: gh('#8a8f96', '#ff5d73', '#2a2a30'), fly: true, boss: true }, buildQueue, start, stop, setMode, setBody: b => { BODY = b || 'ok'; }, setLook: (o, w) => { LOOK = { o: o == null ? null : +o, w: w == null ? null : +w }; }, WEAPONS, XO: XO.map(x => x[0]), XW: XW.map(x => x[0]), NT, setSmoke: v => { SMK = Math.max(0, Math.min(1, +v || 0)); }, portrait, tick: dt => { const s = st; if (s) { update(s, dt); if (st === s) draw(s); } } };
 })();

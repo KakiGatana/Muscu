@@ -386,3 +386,5 @@ textarea.fi{resize:vertical;font-family:inherit}
 .rk.eq{flex-wrap:wrap}
 .eqb{display:flex;gap:6px;flex-wrap:wrap;width:100%;margin-top:6px}
 .eqb .chip{padding:5px 10px}
+
+.rk.eq.lock{opacity:.55}

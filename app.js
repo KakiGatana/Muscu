@@ -448,19 +448,24 @@
       B('Nutrition', [['Carnet ouvert', '1 repas enregistré', foods().length >= 1], ['Semaine suivie', '7 jours avec des repas enregistrés', fd >= 7], ['Mois suivi', '30 jours avec des repas enregistrés', fd >= 30], ['Pesée régulière', '4 pesées', S.body.length >= 4], ['Objectif atteint', 'Poids cible atteint', !!w && w.kg <= nut().goalKg]])
     );
   }
+  // équipements spéciaux : chacun se débloque avec un succès
+  const XU_O = ['Habitué', 'Inarrêtable', 'Moine guerrier', 'Fléau des boss', 'Libéré', 'Vétéran', 'Chasseur de rang A', 'Centurion'];
+  const XU_W = ['Premier record', 'Régulier', 'Acharné', 'Briseur de records', 'Cent tonnes', 'Dompteur de démon', 'Souffle retrouvé', 'Chasseur de rang C'];
+  const gotSet = () => new Set(badges().filter(b => b[2]).map(b => b[0]));
+  const lookOk = (v, kind, got) => v == null || v < RPG.NT || (got || gotSet()).has((kind === 'o' ? XU_O : XU_W)[v - RPG.NT]);
   // annonce les succès nouvellement obtenus (silencieux au premier passage, pour ne pas tout annoncer d'un coup)
   function achSync() {
     const got = badges().filter(b => b[2]).map(b => b[0]);
     if (!S.ach) { S.ach = got; save(); return; }
     const fresh = got.filter(x => S.ach.indexOf(x) < 0);
-    if (fresh.length) { S.ach = got; save(); setTimeout(() => toast('Succès obtenu : ' + fresh.join(', ')), 600); }
+    if (fresh.length) { const gear = fresh.filter(x => XU_O.indexOf(x) >= 0 || XU_W.indexOf(x) >= 0).length; S.ach = got; save(); setTimeout(() => toast('Succès obtenu : ' + fresh.join(', ') + (gear ? ' · nouvel équipement dans l\'Aventure' : '')), 600); }
   }
   // niveau déjà montré à l'écran : montées de niveau, tenues, zones et boss attendent que l'Aventure soit ouverte
   function seenLvl(L) { return Math.max(1, Math.min(L, (S.adv && S.adv.seen) || 1)); }
   function mountGame() {
     const Lr = RPG.levelOf(totalXp()), L = seenLvl(Lr), bf = bodyForm();
     RPG.setBody(bf.k);
-    { const ad = S.adv || {}; RPG.setLook(ad.outfit, ad.weapon); }
+    { const ad = S.adv || {}, gs2 = gotSet(); RPG.setLook(lookOk(ad.outfit, 'o', gs2) ? ad.outfit : null, lookOk(ad.weapon, 'w', gs2) ? ad.weapon : null); }
     const qq = quit(); RPG.setSmoke(qq.start ? Math.max(0, 1 - quitDays() / 30) : (qq.slips ? 1 : 0));
     document.querySelectorAll('canvas[data-me]').forEach(c => RPG.portrait(c, L));
     const c = $('#adv'); if (!c) { RPG.stop(); return; }
@@ -484,7 +489,11 @@
       return `<div class="zone ${open ? '' : 'lock'} ${i === cz ? 'cur' : ''}"><div class="row sp"><b>${open ? esc(z.n) : 'Zone inconnue'}</b><span class="row" style="gap:6px">${open ? (i === cz ? '<span class="chip ok">Tu es ici</span>' : `<button class="chip btnchip" data-act="zoneGo" data-z="${i}">Y aller</button>`) : ''}<span class="chip ${done ? 'ok' : ''}">${done ? 'Terminée' : open ? 'En cours' : 'Niveau ' + z.l}</span></span></div>
         ${open ? `<ul>${z.m.map(m => `<li class="${m.l <= L ? 'won' : ''}"><span>${m.boss ? '<b class="boss">Boss</b>' : ''}${esc(m.n)}</span><small>${m.l <= L ? (m.boss ? 'terrassé' : 'vaincu') : 'niveau ' + m.l}</small></li>`).join('')}</ul>` : ''}</div>`;
     }).join('');
-    const wo = ad.outfit != null && ad.outfit <= ti ? ad.outfit : ti, ww = ad.weapon != null && ad.weapon <= ti ? ad.weapon : ti;
+    const gs3 = gotSet(), okv = (v, k) => v != null && (v >= RPG.NT ? lookOk(v, k, gs3) : v <= ti);
+    const wo = okv(ad.outfit, 'o') ? ad.outfit : ti, ww = okv(ad.weapon, 'w') ? ad.weapon : ti;
+    const cond = n => { const b = badges().find(x => x[0] === n); return b ? b[1] : ''; };
+    const xo = RPG.XO.map((n, j) => { const i = RPG.NT + j, ok = gs3.has(XU_O[j]); return `<div class="rk eq ${ok ? '' : 'lock'}"><div class="grow"><b class="${ok ? '' : 'mut'}">${esc(n)}</b><div class="mut" style="font-size:12.5px">${ok ? 'Tenue spéciale' : 'Succès « ' + esc(XU_O[j]) + ' » : ' + esc(cond(XU_O[j]))}</div></div>${ok ? `<div class="eqb"><button class="chip btnchip ${i === wo ? 'ok' : ''}" data-act="lookSet" data-k="outfit" data-v="${i}">Porter</button></div>` : ''}</div>`; }).join('');
+    const xw = RPG.XW.map((n, j) => { const i = RPG.NT + j, ok = gs3.has(XU_W[j]); return `<div class="rk eq ${ok ? '' : 'lock'}"><div class="grow"><b class="${ok ? '' : 'mut'}">${esc(n)}</b><div class="mut" style="font-size:12.5px">${ok ? 'Arme spéciale' : 'Succès « ' + esc(XU_W[j]) + ' » : ' + esc(cond(XU_W[j]))}</div></div>${ok ? `<div class="eqb"><button class="chip btnchip ${i === ww ? 'ok' : ''}" data-act="lookSet" data-k="weapon" data-v="${i}">Équiper</button></div>` : ''}</div>`; }).join('');
     const tiers = RPG.TIERS.map((t, i) => L >= t.l
       ? `<div class="rk eq"><div class="grow"><b>${esc(t.t)}</b><div class="mut" style="font-size:12.5px">${esc(t.g)}</div></div><div class="eqb"><button class="chip btnchip ${i === wo ? 'ok' : ''}" data-act="lookSet" data-k="outfit" data-v="${i}">Tenue</button><button class="chip btnchip ${i === ww ? 'ok' : ''}" data-act="lookSet" data-k="weapon" data-v="${i}">${esc(RPG.WEAPONS[i])}</button></div></div>`
       : `<div class="rk"><div class="grow"><b class="mut">???</b><div class="mut" style="font-size:12.5px">Se débloque au niveau ${t.l}</div></div></div>`).join('');
@@ -511,6 +520,8 @@
         <li>Niveau maximum : <b>100</b>. À rythme régulier (environ 4 séances par semaine), compte à peu près un an pour le niveau 50 et quatre ans pour le niveau 100.</li></ul></details>
       <div class="sect-h"><h2>Le voyage</h2></div><p class="mut" style="font-size:12.5px;margin:-4px 2px 8px">Retourne dans un monde déjà débloqué quand tu veux.</p>${zones}
       <div class="sect-h"><h2>Équipement</h2>${ad.outfit != null || ad.weapon != null ? '<button class="btn sm ghost" data-act="lookReset">Le plus récent</button>' : ''}</div><p class="mut" style="font-size:12.5px;margin:-4px 2px 8px">Choisis une tenue et une arme parmi celles débloquées. Tu peux les combiner.</p>${tiers}
+      <div class="sect-h"><h2>Tenues spéciales</h2><span class="chip">${RPG.XO.filter((n, j) => gs3.has(XU_O[j])).length} / ${RPG.XO.length}</span></div>${xo}
+      <div class="sect-h"><h2>Armes spéciales</h2><span class="chip">${RPG.XW.filter((n, j) => gs3.has(XU_W[j])).length} / ${RPG.XW.length}</span></div>${xw}
       <div class="sect-h"><h2>Succès</h2><span class="chip">${nb} / ${all.length}</span></div><p class="mut" style="font-size:12.5px;margin:-4px 2px 4px">Touche un succès obtenu pour le porter comme titre.</p>${bd}`;
   }
 
