@@ -571,6 +571,9 @@
   const SNACKS = [
     ['Skyr ou fromage blanc 0 %', '150 g', 90, 15, 'Avec cacao non sucré, cannelle ou fruits rouges : ça devient un dessert'],
     ['Shaker de whey', '30 g', 120, 24, 'Le plus efficace contre une fringale sucrée de fin d\'après-midi'],
+    ['Whey au lait demi-écrémé', '30 g + 300 ml', 260, 34, 'Le plus gros apport en une boisson'],
+    ['Yaourt à boire protéiné', '1 bouteille', 130, 20, 'Rayon frais, environ 20-25 g selon la marque : regarde l\'étiquette'],
+    ['Lait protéiné', '500 ml', 230, 30, 'Lait enrichi en protéines, rayon frais ou sport'],
     ['Thon au naturel', '1 boîte', 110, 25, ''], ['Blanc de dinde ou jambon blanc', '2 tranches', 60, 12, ''],
     ['Pop-corn nature maison', '30 g', 120, 3, 'Sans huile. Énorme volume, idéal devant un écran'], ['Clémentines', '3', 110, 2, 'Occupe les mains et le temps'],
     ['Crudités + dip de fromage blanc', 'à volonté', 50, 4, ''], ['Cornichons', 'à volonté', 10, 0, 'Pour l\'envie de salé'],
@@ -837,8 +840,10 @@ Sans photo, estime à partir de la description : quand la quantité est vague (�
     }));
     const warm = pr.ex.filter(e => e.kind === 'c' && setsDone(e)).length;
     const allSets = work.reduce((n, e) => n + nDone(e), 0), xpSets = work.reduce((n, e) => n + Math.min(8, nDone(e)), 0);
-    const doneEx = work.filter(e => nDone(e) > 0).length, full = !spam && work.length > 0 && work.every(e => nDone(e) >= planned(e));
-    const core = work.filter(e => e.key), coreDone = core.filter(e => nDone(e) >= planned(e)).length;
+    // un exercice est fait s'il ne manque au plus qu'une série sur ce qui était prévu (série retirée, dernière série sautée)
+    const okEx = e => nDone(e) >= Math.max(1, planned(e) - 1);
+    const doneEx = work.filter(e => nDone(e) > 0).length, full = !spam && work.length > 0 && work.every(e => okEx(e) && nDone(e) >= (S.cur.sets[e.id] || []).length);
+    const core = work.filter(e => e.key), coreDone = core.filter(okEx).length;
     const doRecords = [];
     ex.forEach(e => {
       const best = Math.max(0, ...e.sets.map(s => num(s.w) || 0));
