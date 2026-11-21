@@ -1,12 +1,12 @@
 /* Entraînement — l'aventure : niveaux, zones, monstres et rendu pixel art (canvas, aucune image) */
 (function () {
   'use strict';
-  const W = 144, H = 128, GY = 104, HX = 24, MAX = 100;
+  const W = 144, H = 128, GY = 104, HX = 24, MAX = 150;
 
   /* ---------- règles ---------- */
   // XP cumulée pour atteindre le niveau l. Pensé sur plusieurs années à ~4 séances par semaine :
   // niveau 10 ≈ 3 semaines, 20 ≈ 2 mois, 30 ≈ 5 mois, 50 ≈ 1 an, 75 ≈ 2 ans et demi, 100 ≈ 4 ans.
-  const need = l => l <= 1 ? 0 : Math.round(21 * Math.pow(l - 1, 1.9));
+  const need = l => l <= 1 ? 0 : l <= 100 ? Math.round(21 * Math.pow(l - 1, 1.9)) : Math.round(21 * Math.pow(99, 1.9)) + (l - 100) * 2000;
   const levelOf = xp => { let l = 1; while (l < MAX && need(l + 1) <= xp) l++; return l; };
   const streakMult = s => Math.min(2.5, 1 + 0.25 * Math.max(0, s - 1));
   // 3 XP par série validée, 2 par échauffement, +15 si la séance est complète, +5 par record ; le tout × la série en cours
@@ -137,6 +137,40 @@
     [['Garde céleste', 94, 'human', 3, hu('#fff6d8', '#f0d0b0', '#4da3ff', '#e0b04a', '#ffffff', '#c8963a')], ['Sphinx étoilé', 96, 'quad', 4, q('#e6dcff', '#b388ff', '#ffd84a', '#fff')], ['Ange de l\'aube', 98, 'ghost', 3, gh('#fff0f6', '#ff7ad9', '#e0b04a'), 'f'], ['Champion du trône', 98, 'human', 3, hu('#e0b04a', '#f0d0b0', '#ff7ad9', '#3a1a7a', '#ffffff', '#1a1040'), 'B']]
   ];
   MORE.forEach((list, i) => { list.forEach(m => ZONES[i].m.push({ n: m[0], l: m[1], s: m[2], sc: m[3], p: m[4], fly: /f/.test(m[5] || ''), boss: /B/.test(m[5] || '') })); ZONES[i].m.sort((x, y) => x.l - y.l || (x.boss ? 1 : 0) - (y.boss ? 1 : 0)); });
+  // au-delà du trône : cinq zones de fin de jeu, jusqu'au niveau 150
+  ZONES.push(
+    Z(100, 'Les jardins éternels', [
+      ['Fée sauvage', 101, 'bat', 2, bt('#ffb0e6', '#ffffff', '#ffd6f2'), 'f'], ['Plante carnivore', 102, 'slime', 3, sl('#3f9a4a', '#9fe08a', '#ff3b5a', '#c0392b')],
+      ['Cerf de lumière', 104, 'quad', 3, q('#fff6d8', '#e0b04a', '#7fe7ff', '#ffffff')], ['Gardienne des floraisons', 105, 'ghost', 4, gh('#ffd6f2', '#ff7ad9', '#9fe08a'), 'fB'],
+      ['Golem de racines', 106, 'golem', 3, go('#5a4026', '#3f7a3a', '#9fffb0')], ['Dryade corrompue', 107, 'human', 3, hu('#2a5a2a', '#9fd0a0', '#ff4a8a', '#3f7a3a', '#9fffb0', '#1f3a1f')],
+      ['Arbre-monde corrompu', 109, 'golem', 5, go('#3a2a1c', '#2f6a3a', '#ff4ad9'), 'B']]),
+    Z(110, 'La forge des dieux', [
+      ['Étincelle vivante', 111, 'ghost', 2, gh('#ffd060', '#ffffff', '#ff8a2a'), 'f'], ['Automate de bronze', 112, 'human', 3, hu('#b8863a', '#d9a65a', '#6fe3ff', '#8a5a2a', '#e0b04a', '#5a3a1a')],
+      ['Molosse d\'acier', 114, 'quad', 3, q('#6a6f78', '#3a3f48', '#ff4a1a', '#e6ebf0')], ['Marteau-titan', 115, 'golem', 5, go('#5a5a62', '#ffb030', '#ff6a1a'), 'B'],
+      ['Titan forgeron', 116, 'golem', 4, go('#7a5a3a', '#ffb030', '#ffd060')], ['Salamandre d\'or', 117, 'quad', 3, q('#e0b04a', '#fff3b0', '#ff3b1a', '#ffe9a0')],
+      ['Le Forgeron divin', 119, 'human', 4, hu('#2a1a10', '#c98f66', '#ffd060', '#7a3a10', '#ffb030', '#3a2010'), 'B']]),
+    Z(120, 'L\'océan d\'étoiles', [
+      ['Raie céleste', 121, 'bat', 3, bt('#2a2a7a', '#9ad6ff', '#4a4ab8'), 'f'], ['Poisson-lanterne astral', 122, 'eye', 3, ey('#1a1a5a', '#fff3b0', '#ffd060', '#05051a'), 'f'],
+      ['Baleine d\'étoiles', 124, 'quad', 4, q('#1a2a6a', '#9ab0ff', '#ffffff', '#cfd8ff')], ['Kraken stellaire', 125, 'tentacle', 5, gh('#3a2a8a', '#ffd060', '#9ad6ff'), 'B'],
+      ['Méduse nébuleuse', 126, 'tentacle', 3, gh('#b388ff', '#ffffff', '#ff7ad9'), 'f'], ['Navigateur perdu', 127, 'human', 2, hu('#1a1a3a', '#9ab0c4', '#9ad6ff', '#2a2a6a', '#cfd8ff', '#12122a')],
+      ['Léviathan d\'étoiles', 129, 'dragon', 5, dr('#1a1a5a', '#9ad6ff', '#ffffff', '#cfeaff', '#2a2a7a'), 'B']]),
+    Z(130, 'Le labyrinthe du temps', [
+      ['Rouage vivant', 131, 'golem', 2, go('#b8863a', '#e0b04a', '#ffffff')], ['Sablier hanté', 132, 'ghost', 3, gh('#e6c88a', '#ff7a1a', '#8a6a3a'), 'f'],
+      ['Chevalier figé', 134, 'human', 3, hu('#8a8f96', '#c3c9cf', '#ffd060', '#6a6f78', '#e6ebf0', '#3a3f48')], ['Horloger fou', 135, 'human', 4, hu('#e6e6e6', '#d9a57c', '#ffd060', '#5a3a2a', '#e0b04a', '#2a1a10'), 'B'],
+      ['Chronophage', 136, 'spider', 3, sp('#2a2418', '#ffd060', '#5a4a2a')], ['Écho de toi', 137, 'human', 3, hu('#3a3020', '#c9b090', '#ffd060', '#4a3a24', '#ffe9a0', '#2a2418')],
+      ['Gardien de l\'éternité', 139, 'eye', 6, ey('#3a2a14', '#fff6d8', '#e0b04a', '#120a04'), 'fB']]),
+    Z(140, 'L\'Origine', [
+      ['Fragment de lumière', 141, 'ghost', 2, gh('#ffffff', '#4da3ff', '#e6f4ff'), 'f'], ['Sentinelle prismatique', 143, 'golem', 3, go('#e6eaff', '#ff7ad9', '#6fe3ff')],
+      ['Ombre originelle', 145, 'human', 3, hu('#05050a', '#14141e', '#ffffff', '#0a0a12', '#ffffff', '#05050a')], ['Dragon blanc', 147, 'dragon', 4, dr('#f4f6ff', '#cfd8ff', '#4da3ff', '#ffffff', '#e6eaff')],
+      ['Le Premier Monarque', 148, 'human', 4, hu('#ffd76a', '#f0e0d0', '#4da3ff', '#ffffff', '#ffd76a', '#cfd8ff'), 'B'], ['L\'Architecte', 150, 'golem', 6, go('#ffffff', '#ff7ad9', '#4da3ff'), 'B']])
+  );
+  TIERS.push(
+    { l: 110, t: 'Gardien éternel', g: 'Armure de feuilles d\'or, ailes de pétales, lame florale' },
+    { l: 120, t: 'Titan forgé', g: 'Armure de bronze divin, bouclier, marteau divin' },
+    { l: 130, t: 'Navigateur stellaire', g: 'Manteau constellé, trident stellaire' },
+    { l: 140, t: 'Maître du temps', g: 'Armure blanche et or, faux du temps' },
+    { l: 150, t: 'L\'Éveillé', g: 'Armure de lumière prismatique, ailes, lame originelle' }
+  );
   const idx = (arr, l) => { let i = 0; arr.forEach((t, k) => { if (l >= t.l) i = k; }); return i; };
   const tierIdx = l => idx(TIERS, l), zoneIdx = l => idx(ZONES, l);
 
@@ -183,6 +217,8 @@
   const hash = n => { n = Math.sin(n * 127.1 + 3.7) * 43758.5453; return n - Math.floor(n); };
   function disc(cx, cy, r, col) { for (let dy = -r; dy <= r; dy++) { const w = Math.round(Math.sqrt(r * r - dy * dy)); R(col, cx - w, cy + dy, w * 2 + 1, 1); } }
   function spr(rows, pal, x, y, sc) {
+    g.fillStyle = 'rgba(6,6,14,.82)';
+    for (let j = 0; j < rows.length; j++) for (let i = 0; i < rows[j].length; i++) if (pal[rows[j][i]]) g.fillRect(x + i * sc - 1, y + j * sc - 1, sc + 2, sc + 2);
     for (let j = 0; j < rows.length; j++) for (let i = 0; i < rows[j].length; i++) { const c = pal[rows[j][i]]; if (c) { g.fillStyle = c; g.fillRect(x + i * sc, y + j * sc, sc, sc); } }
   }
   // apparence choisie : tenue et arme parmi celles débloquées (sinon les dernières obtenues)
@@ -204,12 +240,24 @@
     ['Faux de l\'ombre', { k: 'scythe', c: '#b388ff', sh: '#2a2030', glow: 1 }], ['Lame de givre', { len: 9, c: '#bfeaff', glow: 1, thick: 1 }], ['Lames du chasseur', { len: 8, c: '#4da3ff', glow: 1, dual: 1 }]
   ];
   XO.forEach(x => HP.push(Object.assign({ s: SKIN, e: EYE, w: HP[0].w }, x[1])));
-  const NT = 15;
+  // rangs au-delà du niveau 100 (rangés après les tenues spéciales dans HP)
+  [
+    { h: '#4a2e1a', plume: '#9fffb0', t: '#3f7a3a', a: '#e0b04a', b: '#9fffb0', p: '#2f5a2e', o: '#e0b04a', wings: '#ffd6f2', aura: '#9fffb0', w: { len: 10, c: '#9fffb0', glow: 1, thick: 1 } },
+    { h: '#b8863a', plume: '#ffb030', t: '#b8863a', a: '#8a5a2a', b: '#ffd060', p: '#6a4a2a', o: '#3a2a1a', shield: '#e0b04a', aura: '#ffb030', w: { k: 'hammer', c: '#ffd060', sh: '#5a3a20', glow: 1 } },
+    { h: '#1a1a3a', e: '#9ad6ff', t: '#1a1a5a', a: '#2a2a7a', b: '#9ad6ff', p: '#12122a', o: '#0a0a1a', cape: '#2a2a7a', aura: '#9ad6ff', w: { k: 'spear', c: '#9ad6ff', sh: '#cfd8ff', glow: 1 } },
+    { h: '#f4f1e6', e: '#ffd060', plume: '#ffd060', t: '#f4f1e6', a: '#e0b04a', b: '#ffd060', p: '#e6e0d0', o: '#b8863a', cape: '#e0b04a', halo: 1, w: { k: 'scythe', c: '#ffd060', sh: '#f4f1e6', glow: 1 } },
+    { h: '#ffffff', e: '#ff7ad9', s: '#fbf6ff', t: '#ffffff', a: '#e6eaff', b: '#ff7ad9', p: '#f4f6ff', o: '#cfd8ff', cape: '#cfd8ff', wings: '#ffffff', halo: 1, aura: 'rb', w: { len: 13, c: '#ffffff', glow: 1, thick: 1 } }
+  ].forEach(p => HP.push(Object.assign({ s: SKIN, e: EYE }, p)));
+  const NT = 15, NX = XO.length;
+  const hpT = t => t < NT ? t : NT + NX + (t - NT);
+  // identifiants d'apparence : rangs 0-14 = 0-14, spéciaux = 15+, rangs 15 et plus = 100 + rang
+  const tid = t => t < NT ? t : 100 + t;
   function lookP(tier) {
-    const ok = v => v != null && (v >= NT || v <= tier);
-    const o = ok(LOOK.o) ? LOOK.o : tier, wv = ok(LOOK.w) ? LOOK.w : tier;
-    const w = wv >= NT ? XW[wv - NT][1] : HP[wv].w;
-    return w === HP[o].w ? HP[o] : Object.assign({}, HP[o], { w });
+    const ok = v => v != null && (v >= 100 ? v - 100 <= tier : v >= NT ? true : v <= tier);
+    const oId = ok(LOOK.o) ? LOOK.o : tid(tier), wId = ok(LOOK.w) ? LOOK.w : tid(tier);
+    const oP = oId >= 100 ? HP[hpT(oId - 100)] : HP[oId];
+    const w = wId >= 100 ? HP[hpT(wId - 100)].w : wId >= NT ? XW[wId - NT][1] : HP[wId].w;
+    return w === oP.w ? oP : Object.assign({}, oP, { w });
   }
   // armes spéciales en pixel : a = distance depuis la main dans l'axe de l'arme, b = décalage perpendiculaire
   function pxSpecial(w, y, sc, hx, atk) {
@@ -235,7 +283,7 @@
     else if (w.k === 'scythe') { seg(-3, 11, 0, 1, w.sh); g.fillStyle = w.c; poly([[11, .2], [11.5, 3.5], [9.5, 7], [7, 8], [9.5, 4.5], [10.2, .8]]); }
     g.shadowBlur = 0; g.lineCap = 'round';
   }
-  const WEAPONS = ['Fourche', 'Dague', 'Épée courte', 'Épée', 'Épée longue', 'Épée longue dorée', 'Deux dagues d\'ombre', 'Lame d\'énergie', 'Espadon de flammes', 'Lame sacrée', 'Lames d\'ombre', 'Lame du vide', 'Lame solaire', 'Lame d\'aurore', 'Lame de lumière pure'];
+  const WEAPONS = ['Fourche', 'Dague', 'Épée courte', 'Épée', 'Épée longue', 'Épée longue dorée', 'Deux dagues d\'ombre', 'Lame d\'énergie', 'Espadon de flammes', 'Lame sacrée', 'Lames d\'ombre', 'Lame du vide', 'Lame solaire', 'Lame d\'aurore', 'Lame de lumière pure', 'Lame florale', 'Marteau divin', 'Trident stellaire', 'Faux du temps', 'Lame originelle'];
   function drawHero(x, y, sc, tier, frame, atk, t) {
     const P = lookP(tier), w = P.w, hx = x + 9 * sc, f2 = Math.floor(t * 4) % 2;
     if (SMK > 0) { g.globalAlpha = .55; for (let k = 0; k < Math.ceil(SMK * 9); k++) { const r = (t * (3 + hash(k) * 3) + hash(k + 4) * 9) % 9; R(k % 2 ? '#8a8f96' : '#6b6f76', x + (1 + hash(k + 1) * 8 + Math.sin(t * 2 + k) * 1.2) * sc, y + (3 - r) * sc, sc, sc); } g.globalAlpha = 1; }
@@ -244,6 +292,7 @@
     if (P.cape) { R(P.cape, x + sc, y + 5 * sc, sc, 6 * sc); R(P.cape, x, y + 7 * sc, sc, (frame ? 4 : 5) * sc); }
     if (P.scarf) { R(P.scarf, x - 2 * sc, y + (4 + f2) * sc, 4 * sc, sc); R(P.scarf, x - 4 * sc, y + (5 - f2) * sc, 3 * sc, sc); }
     spr(bodyRows().concat(LEGS[frame]), P, x, y, sc);
+    R('rgba(0,0,0,.2)', x + 6 * sc, y + 5 * sc, 2 * sc, 4 * sc); R('rgba(255,255,255,.14)', x + 2 * sc, y + 5 * sc, sc, 3 * sc); R('rgba(255,255,255,.18)', x + 3 * sc, y, 3 * sc, sc / 2);
     if (BODY === 'peak') for (let k = 0; k < 4; k++) { const n = k + Math.floor(t * 4) * 7; R('#fff', x + hash(n) * 10 * sc, y + hash(n + 2) * 12 * sc, 1, 1); }
     if (P.mask) R(P.mask, x + 2 * sc, y + 4 * sc, 6 * sc, sc);
     if (P.hat) { R(P.hat, x + 3 * sc, y - sc, 4 * sc, sc); R(P.hat, x + 2 * sc, y, 6 * sc, sc); R(P.hat, x + sc, y + sc, 8 * sc, sc); }
@@ -462,7 +511,7 @@
   function strike(s, p) {
     const m = s.m, mp = mpos(s), hy = GY - 13, big = p.special, T = s.time;
     if (p.hero) {
-      const wp = HP[s.tier].w;
+      const wp = lookP(s.tier).w;
       s.fx.push({ k: 'slash', x: mp.x + 2, y: mp.cy, c: wp.c || '#d7dde3', dir: 1, big: s.tier >= 6, t0: T, d: .24 });
       if (wp.dual) s.fx.push({ k: 'slash', x: mp.x + 5, y: mp.cy + 3, c: '#fff', dir: 1, t0: T + .06, d: .2 });
       s.mflash = T + .1; s.sparks.push({ x: mp.x + 5, y: mp.cy, t0: T }); s.hits++;
@@ -615,6 +664,86 @@
       'Après le trône, il n\'y a plus de monstres. Seulement toi, et ce que tu as construit.',
       'Les marches sont en or, mais elles s\'usent quand même. Regarde où les autres se sont arrêtés.']]
   ];
+  // décors pixel des zones de fin de jeu
+  BG.push(
+    (sx, t) => { // jardins éternels
+      sky(['#ffd6e8', '#ffe9f2', '#e6f7ea']); disc(W - 30, 18, 7, '#fff6dc');
+      ridge(sx, .15, GY - 30, 5, 30, '#c9e8d0'); ridge(sx, .35, GY - 18, 4, 18, '#9fd8b0');
+      each(sx, .55, 30, (x, k) => { const h = 18 + hash(k) * 22; R('#3f9a4a', x + 2, GY - h, 1, h); R('#5fba6a', x + 3, GY - h * .6, 3, 1); const c = ['#ff9ad6', '#ffd060', '#b388ff', '#7fe7ff'][k & 3]; disc(x + 2, GY - h, 4, c); disc(x + 2, GY - h, 1, '#fff6dc'); });
+      for (let i = 0; i < 14; i++) R(i % 2 ? '#ff9ad6' : '#ffffff', (hash(i) * W - t * 6 + W * 4) % W, (hash(i + 3) * GY + t * 9 + Math.sin(t + i) * 3) % GY, 1, 1);
+      ground(sx, '#7fd0a0', '#b8f0c8', '#5fb080');
+    },
+    (sx, t) => { // forge des dieux
+      sky(['#1a0a04', '#3a1a08', '#7a3a10']);
+      each(sx, .15, 90, x => { R('#140804', x, GY - 40, 30, 8); R('#140804', x + 8, GY - 32, 14, 32); R('#140804', x - 4, GY - 44, 38, 4); });
+      each(sx, .4, 40, (x, k) => { for (let y = 0; y < GY - 20; y += 3) R(y % 6 ? '#4a3a2a' : '#6a5a3a', x, y, 2, 2); R('#3a2a1a', x - 2, GY - 22 + Math.sin(t + k) * 2, 6, 4); });
+      R('#ffb030', 0, GY - 3, W, 3); for (let i = 0; i < 10; i++) R('#fff3b0', (hash(i) * W + t * 20) % W, GY - 2, 3, 1);
+      ground(sx, '#2a1a10', '#ffb030', '#4a2a10'); motes(t, 18, '#ffd060', 16);
+    },
+    (sx, t) => { // océan d'étoiles
+      sky(['#05051a', '#120a3a', '#2a1a6a']);
+      for (let i = 0; i < 40; i++) R(i % 6 ? '#ffffff' : '#9ad6ff', hash(i) * W, hash(i + 40) * (GY - 10), 1, 1);
+      disc(40 - (sx * .03) % 60, 30, 12, '#5a4ab8'); disc(36 - (sx * .03) % 60, 26, 9, '#7a6ad8');
+      each(sx, .12, 130, x => { R('#1a2a6a', x, 50, 30, 6); R('#1a2a6a', x + 28, 46, 8, 4); R('#9ab0ff', x + 4, 51, 1, 1); });
+      R('#1a1050', 0, GY, W, H - GY); for (let i = 0; i < 30; i++) R(i % 4 ? '#6a5ab8' : '#cfd8ff', hash(i) * W, GY + 2 + hash(i + 9) * (H - GY - 3), 1, 1);
+      R('#9ab0ff', 0, GY, W, 1);
+    },
+    (sx, t) => { // labyrinthe du temps
+      sky(['#2a2418', '#4a3a24', '#8a6a3a']);
+      each(sx, .2, 60, (x, k) => { const r = 9 + hash(k) * 5, cy = 30 + hash(k + 2) * 20; disc(x, cy, r, '#3a3020'); disc(x, cy, r - 2, '#e6dcc0'); const a = t * (hash(k) + .3), b = t * .1 + k; for (let i = 1; i < r - 3; i++) { R('#2a2418', x + Math.cos(a) * i, cy + Math.sin(a) * i, 1, 1); if (i < r - 5) R('#7a1a1a', x + Math.cos(b) * i, cy + Math.sin(b) * i, 1, 1); } });
+      each(sx, .45, 34, (x, k) => { const cy = 50 + hash(k) * 30, a = t * (k % 2 ? 1 : -1) * .8; disc(x, cy, 5, '#b8863a'); disc(x, cy, 2, '#4a3a24'); for (let i = 0; i < 8; i++) R('#b8863a', x + Math.cos(a + i * .785) * 6 - 1, cy + Math.sin(a + i * .785) * 6 - 1, 2, 2); });
+      each(sx, .7, 50, x => { for (let y = 0; y < GY; y += 2) R('#e6c88a', x + Math.sin(y * .2 + t * 3) * .5, (y + t * 30) % GY, 1, 1); });
+      ground(sx, '#5a4a30', '#8a7a5a', '#3a3020');
+    },
+    (sx, t) => { // l'Origine
+      sky(['#ffffff', '#f0f4ff', '#e6eaff']);
+      each(sx, .2, 40, (x, k) => { const s = 5 + hash(k) * 6, y = 20 + hash(k + 1) * 50 + Math.sin(t + k) * 3; R('#ffffff', x, y, s, s); R(RB[((k % RB.length) + RB.length) % RB.length], x, y, s, 1); R(RB[(((k + 2) % RB.length) + RB.length) % RB.length], x, y, 1, s); R('#cfd8ff', x + s - 1, y + 1, 1, s - 1); });
+      for (let i = 0; i < 5; i++) { g.globalAlpha = .15; R(RB[i], 20 + i * 24 - (sx * .1) % 24, 0, 6, GY); g.globalAlpha = 1; }
+      R('#ffffff', 0, GY, W, H - GY); R('#cfd8ff', 0, GY, W, 1); each(sx, 1, 16, (x, k) => R(RB[((k % RB.length) + RB.length) % RB.length], x, GY + 4 + hash(k) * 16, 6, 1));
+    }
+  );
+  NPCS.push(
+    ['Jardinière éternelle', hu('#9fe08a', '#f0d8c8', '#2a1c12', '#ff9ad6', undefined, '#3f7a3a'), [
+      'Bienvenue au-delà du trône. Ici, rien ne fane, sauf ceux qui renoncent.',
+      'Ces fleurs poussent avec chaque effort fait dans le monde d\'en bas. Celles-ci sont un peu les tiennes.',
+      'L\'Arbre-monde était le cœur du jardin. Quelque chose l\'a rongé de l\'intérieur.',
+      'Les fées sont joueuses, mais elles mordent. Comme le manque, au début.',
+      'Tu as franchi le niveau 100. La plupart des légendes s\'arrêtent là. La tienne continue.',
+      'Ici, on ne compte plus les jours. On compte ce qu\'on a construit.',
+      'Les cerfs de lumière ne fuient que ceux qui doutent. Avance droit.']],
+    ['Apprenti du forgeron', hu('#2a1a10', '#c98f66', '#2a1c12', '#7a3a10', undefined, '#3a2010'), [
+      'Le Forgeron divin a forgé les armes de tous les chasseurs avant toi. La tienne aussi, sans le savoir.',
+      'Chaque coup de marteau ici fait trembler une étoile. Fais attention où tu marches.',
+      'Les automates de bronze n\'ont pas de cœur, seulement une consigne : protéger la forge.',
+      'Le métal le plus dur est celui qu\'on a chauffé et frappé le plus de fois. Pareil pour toi.',
+      'Le Marteau-titan s\'est réveillé quand mon maître a disparu. Je crois qu\'il le cherche aussi.',
+      'L\'or en fusion coule depuis le début des temps. Ne le touche pas, même si c\'est tentant.',
+      'Un jour, j\'aurai mon propre marteau. Toi, tu as déjà ta discipline.']],
+    ['Capitaine sans navire', hu('#1a1a3a', '#d9a57c', '#2a1c12', '#2a2a6a', undefined, '#12122a'), [
+      'Cette mer reflète toutes les étoiles. Celle sous tes pieds est peut-être la tienne.',
+      'Mon navire a coulé dans le ciel. Depuis, je marche sur l\'eau et je cherche le port.',
+      'Les baleines d\'étoiles chantent quand un chasseur dépasse ses limites. Elles chantent souvent depuis ton arrivée.',
+      'Le Kraken stellaire garde les profondeurs du ciel. Personne n\'en est revenu en un seul morceau.',
+      'Ici, l\'horizon n\'existe pas. On avance quand même.',
+      'Les raies célestes suivent les courants de lumière. Suis-les si tu te perds.',
+      'Le Léviathan d\'étoiles a avalé ma boussole. Si tu le bats, rapporte-la-moi.']],
+    ['Gardien des heures', hu('#e6e6e6', '#d9a57c', '#2a1c12', '#5a3a2a', undefined, '#2a1a10'), [
+      'Chaque séance que tu as faite est rangée quelque part dans ce labyrinthe.',
+      'L\'Horloger fou a voulu arrêter le temps pour ne plus jamais vieillir. Le temps s\'est vengé.',
+      'Tu croiseras ton écho, ici. Il a ta force d\'il y a un an. Montre-lui le chemin parcouru.',
+      'Le sable tombe toujours dans le même sens. Les jours aussi. Utilise-les.',
+      'Les chevaliers figés ont abandonné une seconde de trop. Depuis, ils attendent.',
+      'Ici, une minute peut durer un siècle. Ou une série de squats.',
+      'Le Gardien de l\'éternité voit tout ce qui a été et tout ce qui sera. Il t\'a vu arriver.']],
+    ['La Voix', hu('#ffffff', '#fbf6ff', '#4da3ff', '#e6eaff', undefined, '#cfd8ff'), [
+      'Tu es à l\'Origine. Là où tout a commencé, et où tout se décide.',
+      'Le Premier Monarque était un chasseur comme toi. Il a choisi de rester. Toi, tu choisiras.',
+      'L\'Architecte a dessiné chaque monde que tu as traversé. Il t\'attend au niveau 150.',
+      'Il n\'y a plus de monstres à craindre ici. Seulement ce que tu as fait de toi.',
+      'De la fourche du paysan à cette lumière : regarde le chemin.',
+      'Chaque jour sans fumer, chaque séance, chaque repas noté : tout t\'a mené ici.',
+      'Après l\'Architecte, il n\'y a plus de niveau. Il reste l\'habitude, et elle t\'appartient.']]
+  );
   function perfLine(s) {
     const t = s.stats, out = [];
     if (!t || !t.n) return 'Tu n\'as encore rien prouvé. Va soulever quelque chose, on en reparle.';
@@ -1076,6 +1205,98 @@
       g.fillStyle = gL(GY, H, [[0, 'rgba(255,246,216,.6)'], [1, 'rgba(255,246,216,0)']]); g.fillRect(W / 2 - 18, GY, 36, H - GY);
     }
   };
+  RZ.push({ wx: ['mote', '#ffd6f2'] }, { wx: ['ember', '#ffd060'] }, { wx: ['mote', '#cfd8ff'] }, { wx: ['mote', '#ffe9a0'] }, { wx: ['mote', '#ffffff'] });
+  // lumière de contour du héros et étalonnage des couleurs, par zone
+  const RIMS = ['#ffe0a8', '#ffb87a', '#8ff0c0', '#bfe8d8', '#ffc070', '#ffffff', '#ff8a3a', '#cfd8ff', '#c9a8ff', '#fff3d0', '#7fe7ff', '#ff8af0', '#9ad6ff', '#ffd6f2', '#ffe9f2', '#ffd060', '#cfd8ff', '#ffe9a0', '#ffffff'];
+  const GRADES = ['#ffcf90', '#7a5a9a', '#3aa07a', '#2f7a6a', '#c88a4a', '#a8c8f0', '#ff6a2a', '#5a5a9a', '#7a4ad9', '#ffe0b0', '#2a8ab0', '#d94ad0', '#4a4ad0', '#e09ac8', '#f0b0d8', '#ffb040', '#5a6ae0', '#d9b070', '#e6eaff'];
+  let RIM = '#ffffff';
+  Object.assign(REALBG, {
+    14(sx, T) { // jardins éternels : fleurs géantes lumineuses, pétales, cascade de lumière
+      gSky([[0, '#f6c6e0'], [.55, '#ffe6f0'], [1, '#e2f6e8']]);
+      gHalo(112, 24, 50, '#fff6dc', .6); g.fillStyle = '#fffbea'; gEl(112, 24, 7, 7);
+      gHill(sx, .06, GY - 40, 6, 44, '#e6d0f0'); gFog(GY - 50, GY - 20, '#fff0f8', .5);
+      each(sx, .1, 90, (x, k) => { g.fillStyle = gL(10, GY, [[0, 'rgba(255,255,255,.7)'], [1, 'rgba(255,255,255,0)']]); g.fillRect(x, 10 + hash(k) * 10, 3, GY); gHalo(x + 1.5, GY - 6, 10, '#ffffff', .35); });
+      gHill(sx, .22, GY - 26, 5, 26, gL(GY - 34, GY, [[0, '#a8e0b8'], [1, '#6fbf88']]));
+      const flower = (x, k, h, s) => {
+        g.strokeStyle = '#3f8a4a'; g.lineWidth = 1.2 * s; g.beginPath(); g.moveTo(x, GY); g.quadraticCurveTo(x + 4 * s * Math.sin(T * .8 + k), GY - h / 2, x + Math.sin(T * .8 + k) * 2, GY - h); g.stroke();
+        g.fillStyle = '#5fba6a'; gEl(x + 3 * s, GY - h * .4, 4 * s, 1.4 * s, -.4);
+        const fx = x + Math.sin(T * .8 + k) * 2, fy = GY - h, c = ['#ff9ad6', '#ffd060', '#c9a8ff', '#7fe7ff'][k & 3];
+        gGlow(c, 10 * s); for (let i = 0; i < 6; i++) { const a = i * 1.047 + T * .2; g.fillStyle = c; gEl(fx + Math.cos(a) * 3.4 * s, fy + Math.sin(a) * 3.4 * s, 3 * s, 1.6 * s, a); } gNo();
+        g.fillStyle = '#fff6dc'; gEl(fx, fy, 1.6 * s, 1.6 * s); gHalo(fx, fy, 10 * s, c, .3);
+      };
+      each(sx, .45, 34, (x, k) => flower(x, k, 22 + hash(k) * 14, .7));
+      gFog(GY - 16, GY, '#ffe6f0', .3);
+      each(sx, .85, 52, (x, k) => flower(x, k + 7, 36 + hash(k + 3) * 16, 1.1));
+      for (let i = 0; i < 22; i++) { const px = (hash(i) * W - T * (5 + hash(i) * 5) + W * 4) % W, py = (hash(i + 3) * GY + T * 8) % GY; g.fillStyle = i % 2 ? 'rgba(255,154,214,.85)' : 'rgba(255,255,255,.9)'; gEl(px + Math.sin(T * 2 + i) * 2, py, 1.2, .6, T + i); }
+      g.fillStyle = gL(GY, H, [[0, '#8fd8a8'], [1, '#3f8a5a']]); g.fillRect(0, GY, W, H - GY);
+      each(sx, 1, 7, (x, k) => { gLine([x, GY + 3 + hash(k) * 18, x + Math.sin(T + k), GY + hash(k) * 18], .5, 'rgba(200,255,210,.7)'); if (hash(k + 5) > .7) { g.fillStyle = ['#ff9ad6', '#ffd060', '#ffffff'][k % 3]; gEl(x, GY + 2 + hash(k) * 18, .9, .9); } });
+    },
+    15(sx, T) { // forge des dieux : enclumes titanesques, chaînes, rivière d'or en fusion
+      gSky([[0, '#120604'], [.6, '#3a1608'], [1, '#8a3a10']]);
+      gHalo(72, GY - 10, 90, '#ff8a2a', .35);
+      each(sx, .08, 160, x => { // forge géante au loin
+        g.fillStyle = '#1a0a06'; gPoly([x + 10, GY + 1, x + 20, GY - 70, x + 60, GY - 70, x + 70, GY + 1]); g.fillRect(x + 28, GY - 90, 10, 22);
+        gGlow('#ffb030', 14); g.fillStyle = '#ffb040'; gEl(x + 40, GY - 30, 12, 9); gNo(); gHalo(x + 40, GY - 30, 30, '#ff8a2a', .45);
+        for (let i = 0; i < 5; i++) { const tt = (T * .3 + i / 5) % 1; g.fillStyle = `rgba(80,50,40,${(.5 * (1 - tt)).toFixed(2)})`; gEl(x + 33 + tt * 8, GY - 92 - tt * 30, 4 + tt * 8, 3 + tt * 5); }
+      }, 1);
+      each(sx, .35, 70, (x, k) => { // enclumes
+        g.fillStyle = gL(GY - 30, GY, [[0, '#3a3a42'], [1, '#14141a']]); gPoly([x - 14, GY - 26, x + 18, GY - 26, x + 24, GY - 22, x + 10, GY - 20, x + 6, GY - 8, x + 12, GY, x - 8, GY, x - 2, GY - 8, x - 6, GY - 20]);
+        g.fillStyle = 'rgba(255,190,110,.5)'; g.fillRect(x - 14, GY - 26, 32, .8);
+      }, 1);
+      each(sx, .6, 46, (x, k) => { // chaînes qui pendent
+        const sw = Math.sin(T * .9 + k) * 1.5; for (let y = 0; y < 60 + hash(k) * 20; y += 3) { g.strokeStyle = y % 6 ? '#5a4a3a' : '#7a6a5a'; g.lineWidth = .7; g.beginPath(); g.ellipse(x + sw * y / 70, y, y % 6 ? .8 : 1.4, 1.6, 0, 0, 7); g.stroke(); }
+      });
+      g.fillStyle = gL(GY, GY + 6, [[0, '#3a2414'], [1, '#1a0c06']]); g.fillRect(0, GY, W, 6);
+      g.fillStyle = gL(GY + 6, H, [[0, '#fff0a0'], [.4, '#ffb030'], [1, '#a04a10']]); g.fillRect(0, GY + 6, W, H - GY - 6);
+      gGlow('#ffd060', 8); for (let i = 0; i < 6; i++) { const y = GY + 8 + i * 3, o = (T * (10 + i * 3) + i * 9) % 26; g.strokeStyle = `rgba(255,250,210,${(.7 - i * .1).toFixed(2)})`; g.lineWidth = .5; for (let x = -o; x < W; x += 26) { g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 6, y - 1, x + 13, y); g.stroke(); } } gNo();
+      gFog(GY - 10, GY + 8, '#ffb030', .35);
+    },
+    16(sx, T) { // océan d'étoiles : mer-miroir, galaxie, baleines célestes
+      gSky([[0, '#030316'], [.6, '#120a3a'], [1, '#2a1a6a']]);
+      g.save(); g.globalCompositeOperation = 'lighter'; g.fillStyle = gL(0, GY, [[0, 'rgba(120,90,220,0)'], [.5, 'rgba(160,120,255,.25)'], [1, 'rgba(120,90,220,0)']]); g.beginPath(); g.moveTo(0, 40); for (let x = 0; x <= W; x += 4) g.lineTo(x, 26 + Math.sin(x / 30 + .5) * 10); g.lineTo(W, 60); for (let x = W; x >= 0; x -= 4) g.lineTo(x, 46 + Math.sin(x / 30 + .5) * 10); g.fill(); g.restore();
+      const stars = (y0, y1, flip) => { for (let i = 0; i < 60; i++) { const sy = hash(i + 40) * (GY - 6), y = flip ? GY + (GY - sy) * .25 : sy; if (y < y0 || y > y1) continue; g.fillStyle = rgba(i % 7 ? '#ffffff' : '#9ad6ff', (.3 + .6 * Math.abs(Math.sin(T * 1.4 + i))) * (flip ? .5 : 1)); g.fillRect(((hash(i) * W - sx * .03) % W + W) % W, y, .7, .7); } };
+      stars(0, GY, false);
+      each(sx, .05, 200, x => { const px = x + 40, py = 30, r = 12; const pg = g.createRadialGradient(px - 4, py - 4, 1, px, py, r); pg.addColorStop(0, '#9a8ae8'); pg.addColorStop(1, '#1a1040'); g.fillStyle = pg; gEl(px, py, r, r); gHalo(px, py, 26, '#7a6ad8', .25); }, 1);
+      const whale = (wx, wy, s) => { g.fillStyle = 'rgba(40,60,140,.85)'; gEl(wx, wy, 18 * s, 5 * s); gPoly([wx + 16 * s, wy, wx + 26 * s, wy - 6 * s + Math.sin(T) * 2, wx + 26 * s, wy + 6 * s + Math.sin(T) * 2]); g.fillStyle = 'rgba(160,190,255,.5)'; for (let i = 0; i < 6; i++) gEl(wx - 10 * s + i * 4 * s, wy - 2 * s, .6 * s, .6 * s); gEl(wx - 4 * s, wy + 3 * s, 8 * s, 1.2 * s, .2); };
+      whale(W + 50 - ((T * 4) % (W + 140)), 52, 1); whale(W + 90 - ((T * 2.5 + 80) % (W + 200)), 38, .6);
+      gFog(GY - 20, GY, '#5a4ab8', .35);
+      g.fillStyle = gL(GY, H, [[0, '#24186a'], [1, '#08051c']]); g.fillRect(0, GY, W, H - GY); stars(GY, H, true);
+      g.strokeStyle = 'rgba(200,210,255,.3)'; g.lineWidth = .35; for (let r = 0; r < 5; r++) { const y = GY + 3 + r * 4.5, o = (T * (3 + r) + r * 7) % 20; g.beginPath(); for (let x = -o; x < W; x += 20) { g.moveTo(x, y); g.lineTo(x + 8, y); } g.stroke(); }
+      g.fillStyle = 'rgba(200,210,255,.6)'; g.fillRect(0, GY, W, .5);
+    },
+    17(sx, T) { // labyrinthe du temps : horloges géantes, engrenages, cascades de sable
+      gSky([[0, '#1e1810'], [.6, '#4a3a22'], [1, '#a07a40']]);
+      gHalo(72, GY - 20, 80, '#ffd080', .3);
+      each(sx, .07, 150, x => { // grande horloge
+        const cx = x + 60, cy = 44, r = 26;
+        g.fillStyle = '#3a2c18'; gEl(cx, cy, r + 3, r + 3); g.fillStyle = gL(cy - r, cy + r, [[0, '#f4ead0'], [1, '#c9b48a']]); gEl(cx, cy, r, r);
+        for (let i = 0; i < 12; i++) { const a = i * Math.PI / 6; g.fillStyle = '#3a2c18'; gEl(cx + Math.cos(a) * (r - 3), cy + Math.sin(a) * (r - 3), i % 3 ? .7 : 1.4, i % 3 ? .7 : 1.4); }
+        gLine([cx, cy, cx + Math.cos(T * .2 - 1.57) * (r - 9), cy + Math.sin(T * .2 - 1.57) * (r - 9)], 1.6, '#2a1c0c'); gLine([cx, cy, cx + Math.cos(T * 1.5) * (r - 5), cy + Math.sin(T * 1.5) * (r - 5)], .8, '#7a1a1a'); g.fillStyle = '#e0b04a'; gEl(cx, cy, 1.6, 1.6);
+      }, 1);
+      gFog(30, GY, '#5a4a2a', .35);
+      const gear = (cx, cy, r, a, col) => { g.fillStyle = col; for (let i = 0; i < 10; i++) { const t = a + i * .628; g.save(); g.translate(cx + Math.cos(t) * r, cy + Math.sin(t) * r); g.rotate(t); g.fillRect(-1.3, -1.3, 2.6, 2.6); g.restore(); } gEl(cx, cy, r, r); g.fillStyle = 'rgba(0,0,0,.35)'; gEl(cx, cy, r * .4, r * .4); g.fillStyle = 'rgba(255,240,200,.25)'; gEl(cx - r * .3, cy - r * .3, r * .3, r * .2); };
+      each(sx, .4, 44, (x, k) => gear(x, 50 + hash(k) * 30, 5 + hash(k + 1) * 4, T * (k % 2 ? .7 : -.7), '#b8863a'));
+      each(sx, .65, 70, (x, k) => { g.fillStyle = gL(0, GY, [[0, 'rgba(230,200,140,.9)'], [1, 'rgba(230,200,140,.2)']]); g.fillRect(x, 0, 1.6, GY); for (let i = 0; i < 8; i++) { g.fillStyle = 'rgba(255,230,170,.9)'; g.fillRect(x + hash(i + k) * 1.6, (T * 40 + i * 13) % GY, .5, .5); } g.fillStyle = '#d9b47a'; gPoly([x - 6, GY, x + .8, GY - 5, x + 7.6, GY]); });
+      each(sx, .85, 60, (x, k) => { g.fillStyle = gL(GY - 40, GY, [[0, '#6a5a3a'], [1, '#3a3020']]); g.fillRect(x, GY - 36 + hash(k) * 10, 8, 40); g.fillStyle = '#4a3c26'; g.fillRect(x - 1.5, GY - 38 + hash(k) * 10, 11, 3); g.fillStyle = 'rgba(255,230,170,.18)'; g.fillRect(x + 6.6, GY - 36 + hash(k) * 10, 1.2, 40); });
+      g.fillStyle = gL(GY, H, [[0, '#7a6a4a'], [1, '#2a2214']]); g.fillRect(0, GY, W, H - GY);
+      g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = .35; for (let r = 0; r < 5; r++) { const y = GY + 2 + r * 5; g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); const o = (r % 2 ? 6 : 0) - sx % 12; for (let x = o; x < W; x += 12) { g.beginPath(); g.moveTo(x, y); g.lineTo(x, y + 5); g.stroke(); } }
+    },
+    18(sx, T) { // l'Origine : vide blanc, géométrie prismatique, rayons d'arc-en-ciel
+      gSky([[0, '#ffffff'], [.6, '#f2f4ff'], [1, '#e2e8ff']]);
+      g.save(); g.globalAlpha = .18; for (let i = 0; i < 7; i++) { g.fillStyle = RB[i % RB.length]; const a = 1.15 + i * .12 + Math.sin(T * .2) * .04; gPoly([72, -10, 72 + Math.cos(a) * 220, -10 + Math.sin(a) * 220, 72 + Math.cos(a + .07) * 220, -10 + Math.sin(a + .07) * 220]); } g.restore();
+      each(sx, .1, 120, x => { const cx = x + 50, cy = 46; gHalo(cx, cy, 40, '#cfd8ff', .5); g.save(); g.translate(cx, cy); g.rotate(T * .15); g.strokeStyle = 'rgba(120,140,220,.6)'; g.lineWidth = .6; for (let i = 0; i < 3; i++) { g.rotate(1.047); g.strokeRect(-14, -14, 28, 28); } g.restore(); g.fillStyle = '#ffffff'; gGlow('#ffffff', 14); gEl(cx, cy, 5, 5); gNo(); }, 1);
+      each(sx, .35, 34, (x, k) => { // cristaux prismatiques flottants
+        const y = 24 + hash(k) * 54 + Math.sin(T + k) * 3, s = 4 + hash(k + 1) * 5; g.save(); g.translate(x, y); g.rotate(T * .4 * (hash(k) - .5));
+        g.fillStyle = 'rgba(255,255,255,.9)'; gPoly([0, -s * 1.4, s, 0, 0, s * 1.4, -s, 0]); g.strokeStyle = RB[((k % RB.length) + RB.length) % RB.length]; g.lineWidth = .6; gGlow(RB[((k % RB.length) + RB.length) % RB.length], 6); g.beginPath(); g.moveTo(0, -s * 1.4); g.lineTo(s, 0); g.lineTo(0, s * 1.4); g.lineTo(-s, 0); g.closePath(); g.stroke(); gNo();
+        g.fillStyle = rgba(RB[(((k + 2) % RB.length) + RB.length) % RB.length], .35); gPoly([0, -s * 1.4, s, 0, 0, 0]); g.restore();
+      });
+      gFog(GY - 24, GY, '#dfe6ff', .5);
+      g.fillStyle = gL(GY, H, [[0, '#ffffff'], [1, '#d6dcf4']]); g.fillRect(0, GY, W, H - GY);
+      g.strokeStyle = 'rgba(160,170,230,.4)'; g.lineWidth = .35; for (let i = 1; i < 6; i++) { const y = GY + Math.pow(i / 5, 1.7) * (H - GY); g.beginPath(); g.moveTo(0, y); g.lineTo(W, y); g.stroke(); }
+      for (let i = -10; i <= 10; i++) { const bx = W / 2 + (i * 14 - (sx % 14)) * 3; g.beginPath(); g.moveTo(W / 2 + (bx - W / 2) * .12, GY); g.lineTo(bx, H); g.stroke(); }
+      each(sx, 1, 20, (x, k) => { g.fillStyle = rgba(RB[((k % RB.length) + RB.length) % RB.length], .35); g.fillRect(x, GY + 4 + hash(k) * 16, 8, .7); });
+    }
+  });
   function cityReal(sx, T) {
     let gr = g.createLinearGradient(0, 0, 0, GY); gr.addColorStop(0, '#0d1024'); gr.addColorStop(.55, '#3a2a4a'); gr.addColorStop(1, '#c46a48'); g.fillStyle = gr; g.fillRect(0, 0, W, GY + 1);
     // lune voilée
@@ -1136,6 +1357,7 @@
     g.fillStyle = 'rgba(200,150,140,.18)'; g.fillRect(0, GY, W, .6);
   }
   function bgReal(z, sx, T) {
+    RIM = RIMS[z] || '#ffffff';
     if (z === 1) { cityReal(sx, T); return; }
     if (REALBG[z]) { REALBG[z](sx, T); return; }
     const Z = RZ[z];
@@ -1156,43 +1378,86 @@
     else if (k === 'snow') { g.fillStyle = rgba(c, .85); for (let i = 0; i < 34; i++) { g.beginPath(); g.arc((hash(i) * W + Math.sin(T + i) * 6 + T * 7) % W, (hash(i + 3) * H + T * (14 + hash(i) * 14)) % H, .5 + hash(i + 5) * .7, 0, 7); g.fill(); } }
     else if (k === 'bubble') { g.strokeStyle = rgba(c, .5); g.lineWidth = .35; for (let i = 0; i < 16; i++) { g.beginPath(); g.arc((hash(i) * W + Math.sin(T * 1.5 + i) * 4 + W) % W, H - ((T * (12 + hash(i) * 10) + hash(i + 4) * H) % H), .8 + hash(i + 8) * 1.2, 0, 7); g.stroke(); } }
     else { const em = k === 'ember'; g.shadowColor = c; g.shadowBlur = 8; for (let i = 0; i < (em ? 22 : 16); i++) { g.fillStyle = rgba(c, .35 + .55 * Math.abs(Math.sin(T * 2 + i * 2.3))); g.beginPath(); g.arc((hash(i) * W + Math.sin(T * .8 + i) * 8 + W) % W, GY + 6 - ((T * (em ? 16 : 5) * (1 + hash(i + 9)) + hash(i + 4) * 100) % 104), em ? .7 : .55, 0, 7); g.fill(); } g.shadowBlur = 0; }
+    g.save(); g.globalCompositeOperation = 'soft-light'; g.globalAlpha = .4; g.fillStyle = GRADES[z] || '#808080'; g.fillRect(0, 0, W, H); g.restore();
+    g.fillStyle = 'rgba(255,255,255,.035)'; for (let i = 0; i < 50; i++) g.fillRect(Math.random() * W, Math.random() * H, .5, .5);
     const v = g.createRadialGradient(W / 2, H * .52, H * .3, W / 2, H * .52, H * .86); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.66)'); g.fillStyle = v; g.fillRect(0, 0, W, H);
   }
   function heroReal(x, tier, walking, atk, ak, T) {
     const P = lookP(tier), w = P.w, fy = GY, sw = walking ? Math.sin(T * 10) : 0, bob = walking ? Math.abs(Math.sin(T * 10)) * .8 : Math.sin(T * 2) * .3;
     const cx = x + 10, hipY = fy - 12 - bob, shY = fy - 21.5 - bob, hdY = fy - 25.2 - bob;
     const line = (x1, y1, x2, y2) => { g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); };
+    const limb = (pts, wd, col) => { g.strokeStyle = col; g.lineWidth = wd; g.beginPath(); g.moveTo(pts[0], pts[1]); for (let i = 2; i < pts.length; i += 2) g.lineTo(pts[i], pts[i + 1]); g.stroke(); };
+    const armored = !!(P.plume || P.shield || P.wings || P.halo);
     g.lineCap = 'round'; g.lineJoin = 'round';
-    g.fillStyle = 'rgba(0,0,0,.4)'; g.beginPath(); g.ellipse(cx, fy + .6, 8, 1.6, 0, 0, 7); g.fill();
+    g.fillStyle = 'rgba(0,0,0,.42)'; g.beginPath(); g.ellipse(cx + 1, fy + .6, 8.5, 1.7, 0, 0, 7); g.fill();
     if (SMK > 0) for (let k = 0; k < Math.ceil(SMK * 7); k++) { const r = (T * (2 + hash(k) * 2) + hash(k + 4) * 14) % 14; g.fillStyle = `rgba(150,154,162,${(.3 * SMK * (1 - r / 14)).toFixed(3)})`; g.beginPath(); g.arc(cx - 6 + hash(k + 1) * 12 + Math.sin(T * 1.5 + k) * 2, hdY + 4 - r, 2.2 + r * .22, 0, 7); g.fill(); }
-    if (P.aura) { const c = P.aura === 'rb' ? RB[Math.floor(T * 3) % RB.length] : P.aura, gr = g.createRadialGradient(cx, fy - 14, 2, cx, fy - 14, 21); gr.addColorStop(0, rgba(c, .5)); gr.addColorStop(1, rgba(c, 0)); g.fillStyle = gr; g.fillRect(cx - 22, fy - 36, 44, 40); }
-    if (P.wings) { const fl = Math.sin(T * 4) * 2; g.fillStyle = rgba(P.wings, .88); [0, 4].forEach((o, i) => { g.beginPath(); g.moveTo(cx - 2, shY + 2 + o); g.quadraticCurveTo(cx - 12, shY - 13 - fl + o * 1.5, cx - 21 + i * 4, shY - 4 - fl + o); g.quadraticCurveTo(cx - 12, shY + 2 + o, cx - 3, shY + 7 + o); g.fill(); }); }
+    if (P.aura) { const c = P.aura === 'rb' ? RB[Math.floor(T * 3) % RB.length] : P.aura, gr = g.createRadialGradient(cx, fy - 14, 2, cx, fy - 14, 22); gr.addColorStop(0, rgba(c, .5)); gr.addColorStop(1, rgba(c, 0)); g.fillStyle = gr; g.fillRect(cx - 23, fy - 37, 46, 42); for (let k = 0; k < 6; k++) { const ph = (T * .8 + k / 6) % 1; g.fillStyle = rgba(c, .7 * (1 - ph)); g.fillRect(cx - 8 + hash(k) * 16, fy - 2 - ph * 28, .6, 1.4); } }
+    if (P.wings) { // ailes en trois rangées de plumes
+      const fl = Math.sin(T * 4) * 2;
+      for (let r = 0; r < 3; r++) { g.fillStyle = r === 2 ? tint(P.wings, -.25) : rgba(P.wings, .92 - r * .12); g.beginPath(); g.moveTo(cx - 2, shY + 1 + r * 1.5); g.quadraticCurveTo(cx - 12 - r, shY - 14 - fl + r * 3, cx - 23 + r * 3, shY - 5 - fl + r * 2.5);
+        for (let f = 0; f < 4; f++) g.quadraticCurveTo(cx - 20 + r * 3 + f * 4, shY - 1 - fl + r * 2 + f * 1.6, cx - 18 + r * 3 + f * 4, shY + 2 - fl + r * 2 + f * 1.4); g.lineTo(cx - 2, shY + 6 + r); g.fill(); }
+    }
     const cp = P.cape || P.scarf;
-    if (cp) { const f = Math.sin(T * 5) * 1.5 + (walking ? 2 : 0); g.fillStyle = cp; g.beginPath(); g.moveTo(cx - 2, shY); g.quadraticCurveTo(cx - 8 - f, shY + 6, cx - 9 - f * 1.5, P.cape ? fy - 3 : shY + 5 + f); g.lineTo(cx - 4, P.cape ? fy - 5 : shY + 3); g.lineTo(cx + 1, shY + 2); g.fill(); }
-    // bras arrière, seconde lame, bouclier
-    g.strokeStyle = P.a; g.lineWidth = 2.3; line(cx - 3, shY + 1.5, cx - 4.5, shY + 8);
-    if (w.dual) { if (w.glow) { g.shadowColor = w.c; g.shadowBlur = 9; } g.strokeStyle = w.c; g.lineWidth = 1.1; line(cx - 4.5, shY + 8, cx - 8.5, shY + 15); g.shadowBlur = 0; }
-    // jambes
-    [[-1.6, sw], [1.6, -sw]].forEach(([o, q]) => { g.strokeStyle = P.p; g.lineWidth = 3; g.beginPath(); g.moveTo(cx + o, hipY); g.lineTo(cx + o + q * 1.5, hipY + 5); g.lineTo(cx + o + q * 3, fy - 1.4); g.stroke(); g.strokeStyle = P.o; g.lineWidth = 2.5; line(cx + o + q * 3, fy - 1.2, cx + o + q * 3 + 1.8, fy - 1); });
-    // buste
-    const bd = BODY === 'peak' ? 'fit' : BODY, sw2 = bd === 'fat' ? 4.8 : bd === 'thin' ? 3.6 : bd === 'fit' ? 5.5 : 4.5, ww = bd === 'fat' ? 4.4 : bd === 'thin' ? 2.3 : bd === 'fit' ? 2.8 : 3;
-    const tp = () => { g.beginPath(); g.moveTo(cx - sw2, shY); g.lineTo(cx + sw2, shY); g.lineTo(cx + ww, hipY + 1); g.lineTo(cx - ww, hipY + 1); g.closePath(); if (bd === 'fat') g.ellipse(cx + 2.2, hipY - 3, 3.6, 3.8, 0, 0, 7); };
+    if (cp) { // cape avec dégradé et plis
+      const f = Math.sin(T * 5) * 1.5 + (walking ? 2.2 : 0), bot = P.cape ? fy - 2.5 : shY + 5 + f;
+      const gr = g.createLinearGradient(cx - 10, shY, cx, bot); gr.addColorStop(0, cp); gr.addColorStop(1, tint(cp, -.5)); g.fillStyle = gr;
+      g.beginPath(); g.moveTo(cx - 2.5, shY - .5); g.quadraticCurveTo(cx - 9 - f, shY + 6, cx - 10.5 - f * 1.6, bot); g.quadraticCurveTo(cx - 7 - f, bot + 1, cx - 4, bot - 1.5); g.lineTo(cx + 1, shY + 2); g.fill();
+      if (P.cape) { g.strokeStyle = rgba('#000000', .25); g.lineWidth = .4; line(cx - 4, shY + 3, cx - 7 - f * 1.2, bot - 1); line(cx - 3, shY + 4, cx - 5 - f, bot - 1.5); }
+    }
+    // bras arrière
+    limb([cx - 3.2, shY + 1.4, cx - 4.4, shY + 4.8, cx - 4.8, shY + 8.2], 2.2, tint(P.a, -.35));
+    g.fillStyle = armored ? tint(P.a, -.55) : tint(P.s, -.25); g.beginPath(); g.arc(cx - 4.8, shY + 8.4, .9, 0, 7); g.fill();
+    if (w.dual) { if (w.glow) { g.shadowColor = w.c; g.shadowBlur = 9; } g.strokeStyle = w.c; g.lineWidth = 1.1; line(cx - 4.8, shY + 8.4, cx - 8.8, shY + 15.4); g.shadowBlur = 0; }
+    // jambes : cuisse, genou, tibia, botte (jambe arrière plus sombre)
+    [[-1.5, sw, -.3], [1.5, -sw, 0]].forEach(([o, qq, dk]) => {
+      const kx = cx + o + qq * 1.6, ky = hipY + 5.4, ax = cx + o + qq * 3, ay = fy - 2.4, pc = dk ? tint(P.p, dk) : P.p;
+      limb([cx + o, hipY, kx, ky], 3.3, pc); limb([kx, ky, ax, ay], 2.7, pc);
+      g.strokeStyle = 'rgba(255,255,255,.12)'; g.lineWidth = .5; line(cx + o + .9, hipY + .5, kx + .9, ky);
+      if (armored) { g.fillStyle = tint(P.a, dk - .1); g.beginPath(); g.ellipse(kx + .3, ky, 1.5, 1.2, 0, 0, 7); g.fill(); }
+      const bc = dk ? tint(P.o, dk) : P.o; g.fillStyle = bc; g.beginPath(); g.moveTo(ax - 1.3, ay - 1.2); g.lineTo(ax + 1.2, ay - 1.2); g.lineTo(ax + 1.4, fy - 1.1); g.lineTo(ax + 3.2, fy - .7); g.lineTo(ax + 3.2, fy); g.lineTo(ax - 1.4, fy); g.closePath(); g.fill();
+      g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(ax - 1.4, fy - .5, 4.6, .5); g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(ax - 1.1, ay - 1.1, 2.2, .5);
+    });
+    // buste en V, ombré, plastron pour les armures
+    const bd = BODY === 'peak' ? 'fit' : BODY, sw2 = bd === 'fat' ? 4.9 : bd === 'thin' ? 3.6 : bd === 'fit' ? 5.6 : 4.7, ww = bd === 'fat' ? 4.4 : bd === 'thin' ? 2.3 : bd === 'fit' ? 2.7 : 3;
+    const tp = () => { g.beginPath(); g.moveTo(cx - sw2, shY + .8); g.quadraticCurveTo(cx - sw2 - .2, shY - .9, cx - sw2 + 1.4, shY - 1); g.lineTo(cx + sw2 - 1.4, shY - 1); g.quadraticCurveTo(cx + sw2 + .2, shY - .9, cx + sw2, shY + .8); g.lineTo(cx + ww + .3, hipY - 2); g.lineTo(cx + ww, hipY + 1); g.lineTo(cx - ww, hipY + 1); g.lineTo(cx - ww - .3, hipY - 2); g.closePath(); if (bd === 'fat') g.ellipse(cx + 2.2, hipY - 3, 3.6, 3.8, 0, 0, 7); };
     tp(); g.fillStyle = P.t; g.fill();
-    const sh = g.createLinearGradient(cx - 5, 0, cx + 5, 0); sh.addColorStop(0, 'rgba(0,0,0,.55)'); sh.addColorStop(.6, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(255,255,255,.2)'); tp(); g.fillStyle = sh; g.fill();
-    g.fillStyle = P.b; g.fillRect(cx - ww - .2, hipY - 1, ww * 2 + .4 + (bd === 'fat' ? 1.6 : 0), 1.3);
+    const sh = g.createLinearGradient(cx - 5, 0, cx + 5, 0); sh.addColorStop(0, 'rgba(0,0,0,.5)'); sh.addColorStop(.55, 'rgba(0,0,0,0)'); sh.addColorStop(1, 'rgba(255,255,255,.22)'); tp(); g.fillStyle = sh; g.fill();
+    const vs = g.createLinearGradient(0, shY, 0, hipY); vs.addColorStop(0, 'rgba(255,255,255,.12)'); vs.addColorStop(1, 'rgba(0,0,0,.25)'); tp(); g.fillStyle = vs; g.fill();
+    g.strokeStyle = 'rgba(0,0,0,.28)'; g.lineWidth = .35;
+    if (armored) { g.beginPath(); g.moveTo(cx - sw2 + 1.2, shY + 1.2); g.quadraticCurveTo(cx, shY + 4.5, cx + sw2 - 1.2, shY + 1.2); g.stroke(); line(cx, shY + 3.4, cx, hipY - 1.5); g.strokeStyle = 'rgba(255,255,255,.3)'; line(cx + 1, shY + .4, cx + sw2 - 1.4, shY + .4); }
+    else { line(cx - .6, shY - .6, cx + .4, shY + 2.4); line(cx + 1.4, shY - .6, cx + .4, shY + 2.4); }
+    g.fillStyle = P.b; g.fillRect(cx - ww - .3, hipY - 1.1, ww * 2 + .6 + (bd === 'fat' ? 1.6 : 0), 1.4); g.fillStyle = '#e0b04a'; g.fillRect(cx + .3, hipY - 1.2, 1.3, 1.6); g.fillStyle = 'rgba(0,0,0,.4)'; g.fillRect(cx + .7, hipY - .8, .5, .8);
     if (BODY === 'peak') { g.fillStyle = '#fff'; for (let k = 0; k < 4; k++) { const n = k + Math.floor(T * 4) * 7; g.fillRect(cx - 8 + hash(n) * 16, shY - 6 + hash(n + 2) * 22, .6, .6); } }
-    if (P.shield) { g.fillStyle = P.shield; g.beginPath(); g.ellipse(cx - 5.5, shY + 7, 2.8, 4.4, 0, 0, 7); g.fill(); g.fillStyle = 'rgba(255,255,255,.3)'; g.beginPath(); g.ellipse(cx - 5, shY + 5.5, 1, 1.8, 0, 0, 7); g.fill(); }
-    // tête
-    g.fillStyle = P.s; g.beginPath(); g.arc(cx, hdY, 3, 0, 7); g.fill();
-    g.fillStyle = P.h; g.beginPath(); g.arc(cx, hdY, 3.2, Math.PI * .62, Math.PI * 1.92); g.closePath(); g.fill();
-    if (P.mask) { g.fillStyle = P.mask; g.beginPath(); g.arc(cx, hdY, 3.1, -.1, Math.PI * .8); g.closePath(); g.fill(); }
-    if (P.hat) { g.fillStyle = P.hat; g.beginPath(); g.moveTo(cx - 7, hdY - 1); g.lineTo(cx + .5, hdY - 6); g.lineTo(cx + 7.5, hdY - 1); g.closePath(); g.fill(); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(cx - 7, hdY - 1.4, 14.5, .6); }
-    if (P.e !== EYE) { g.shadowColor = P.e; g.shadowBlur = 7; } g.fillStyle = P.e; g.fillRect(cx + 1.2, hdY - .5, 1.1, .8); g.shadowBlur = 0;
-    if (P.plume) { g.strokeStyle = P.plume; g.lineWidth = 1.5; g.beginPath(); g.moveTo(cx, hdY - 3); g.quadraticCurveTo(cx - 2, hdY - 8, cx - 6, hdY - 5 + Math.sin(T * 5)); g.stroke(); }
-    if (P.halo) { g.shadowColor = '#fff3b0'; g.shadowBlur = 9; g.strokeStyle = '#fff3b0'; g.lineWidth = .8; g.beginPath(); g.ellipse(cx, hdY - 6.5, 4.4, 1.2, 0, 0, 7); g.stroke(); g.shadowBlur = 0; }
-    // bras avant et arme
+    if (P.shield) { const sg = g.createLinearGradient(cx - 8, 0, cx - 3, 0); sg.addColorStop(0, tint(P.shield, -.4)); sg.addColorStop(1, tint(P.shield, .25)); g.fillStyle = sg; g.beginPath(); g.moveTo(cx - 8.4, shY + 3); g.lineTo(cx - 2.8, shY + 3); g.lineTo(cx - 3, shY + 9); g.quadraticCurveTo(cx - 5.6, shY + 12, cx - 5.6, shY + 12); g.quadraticCurveTo(cx - 8.2, shY + 10.5, cx - 8.4, shY + 9); g.closePath(); g.fill(); g.strokeStyle = '#e0b04a'; g.lineWidth = .45; g.stroke(); g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(cx - 6, shY + 4, .6, 5); }
+    // cou et tête
+    g.fillStyle = tint(P.s, -.22); g.fillRect(cx - .9, hdY + 2.1, 1.9, 1.6);
+    const fg = g.createLinearGradient(cx - 3, 0, cx + 3, 0); fg.addColorStop(0, tint(P.s, -.25)); fg.addColorStop(.6, P.s); fg.addColorStop(1, tint(P.s, .12)); g.fillStyle = fg;
+    g.beginPath(); g.moveTo(cx - 2.6, hdY - 1.5); g.quadraticCurveTo(cx - 2.9, hdY + 1.8, cx - .6, hdY + 3); g.quadraticCurveTo(cx + 2.4, hdY + 2.9, cx + 2.9, hdY + .4); g.quadraticCurveTo(cx + 3, hdY - 2.6, cx, hdY - 3.1); g.quadraticCurveTo(cx - 2.6, hdY - 2.9, cx - 2.6, hdY - 1.5); g.fill();
+    g.fillStyle = tint(P.s, -.3); g.beginPath(); g.ellipse(cx - 1.1, hdY + .2, .6, .9, 0, 0, 7); g.fill();
+    g.fillStyle = tint(P.s, -.18); g.fillRect(cx + 2.6, hdY + .3, .5, .6);
+    // cheveux : volume arrière et mèches
+    g.fillStyle = P.h; g.beginPath(); g.arc(cx - .3, hdY - .5, 3.3, Math.PI * .56, Math.PI * 1.92); g.closePath(); g.fill();
+    g.beginPath(); [[-3.3, -.4], [-2.8, -3.7], [-1.6, -2.9], [-.8, -4.4], [.4, -3.2], [1.4, -4.1], [2.2, -2.6], [3.4, -2.2], [2.7, -1.2], [.9, -1.8], [-.8, -1.2], [-2, -.9]].forEach((p, i) => { if (i) g.lineTo(cx + p[0], hdY + p[1]); else g.moveTo(cx + p[0], hdY + p[1]); }); g.closePath(); g.fill();
+    g.strokeStyle = tint(P.h, .35); g.lineWidth = .3; line(cx - 1.4, hdY - 3.2, cx + .6, hdY - 2.2);
+    if (P.mask) { g.fillStyle = P.mask; g.beginPath(); g.moveTo(cx - .4, hdY + .2); g.lineTo(cx + 3, hdY); g.lineTo(cx + 2.6, hdY + 2.6); g.quadraticCurveTo(cx + .6, hdY + 3.2, cx - .8, hdY + 2.6); g.closePath(); g.fill(); }
+    if (P.hat) { g.fillStyle = P.hat; g.beginPath(); g.moveTo(cx - 7.2, hdY - 1.2); g.quadraticCurveTo(cx, hdY - 7.2, cx + 7.6, hdY - 1.2); g.closePath(); g.fill(); g.fillStyle = 'rgba(0,0,0,.25)'; g.fillRect(cx - 7, hdY - 1.6, 14.6, .6); g.strokeStyle = 'rgba(120,80,20,.4)'; g.lineWidth = .3; line(cx - 4, hdY - 2.4, cx + 4.5, hdY - 2.4); }
+    // œil, sourcil
+    g.fillStyle = '#f4f0ea'; g.fillRect(cx + 1.1, hdY - .7, 1.3, .9);
+    if (P.e !== EYE) { g.shadowColor = P.e; g.shadowBlur = 7; } g.fillStyle = P.e; g.fillRect(cx + 1.6, hdY - .7, .8, .9); g.shadowBlur = 0;
+    g.fillStyle = 'rgba(255,255,255,.9)'; g.fillRect(cx + 1.7, hdY - .7, .25, .25);
+    g.fillStyle = tint(P.h, -.15); g.fillRect(cx + .9, hdY - 1.4, 1.8, .35);
+    if (P.plume) { g.strokeStyle = P.plume; g.lineWidth = 1.5; g.beginPath(); g.moveTo(cx, hdY - 3.4); g.quadraticCurveTo(cx - 2, hdY - 8.5, cx - 6.5, hdY - 5.5 + Math.sin(T * 5)); g.stroke(); g.strokeStyle = tint(P.plume, .4); g.lineWidth = .4; g.beginPath(); g.moveTo(cx, hdY - 3.4); g.quadraticCurveTo(cx - 2, hdY - 8.2, cx - 6, hdY - 5.6 + Math.sin(T * 5)); g.stroke(); }
+    if (P.halo) { g.shadowColor = '#fff3b0'; g.shadowBlur = 9; g.strokeStyle = '#fff3b0'; g.lineWidth = .8; g.beginPath(); g.ellipse(cx, hdY - 7, 4.4, 1.2, 0, 0, 7); g.stroke(); g.shadowBlur = 0; }
+    // lumière de contour, couleur de la zone
+    g.strokeStyle = rgba(RIM, .55); g.lineWidth = .45; g.beginPath(); g.arc(cx, hdY - .2, 3.2, -1.2, .7); g.stroke(); line(cx + sw2 - .2, shY + .6, cx + ww + .3, hipY - 2);
+    // épaulière avant
+    if (armored) { const pg = g.createRadialGradient(cx + 3.2, shY - .2, .3, cx + 3.4, shY + .6, 2.6); pg.addColorStop(0, tint(P.a, .35)); pg.addColorStop(1, tint(P.a, -.3)); g.fillStyle = pg; g.beginPath(); g.ellipse(cx + 3.4, shY + .5, 2.4, 1.7, -.2, 0, 7); g.fill(); }
+    // bras avant (épaule, coude, main gantée) et arme
     const hxh = cx + (atk ? 7 : 5), hyh = shY + (atk ? 4 : 7), an = atk ? -1.9 + Math.max(0, Math.min(1, (ak - .38) / .42)) * 2.5 : -1.2, dx = Math.cos(an), dy = Math.sin(an);
-    g.strokeStyle = P.a; g.lineWidth = 2.4; line(cx + 3, shY + 1.5, hxh, hyh);
+    const ex = (cx + 3.2 + hxh) / 2 + (atk ? .6 : -.4), ey = (shY + 1.4 + hyh) / 2 + 1.3;
+    limb([cx + 3.2, shY + 1.4, ex, ey], 2.4, P.a); limb([ex, ey, hxh, hyh], 2.1, tint(P.a, -.08));
+    g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = .4; line(cx + 3.8, shY + 1.2, ex + .5, ey - .2);
+    g.fillStyle = armored ? tint(P.a, -.5) : P.s; g.beginPath(); g.arc(hxh, hyh, 1, 0, 7); g.fill();
     if (w.k === 'fork') {
       g.strokeStyle = '#8a6a3f'; g.lineWidth = 1.1; line(hxh - dx * 5, hyh - dy * 5, hxh + dx * 15, hyh + dy * 15);
       g.strokeStyle = '#c3c9cf'; g.lineWidth = .8; [-1, 0, 1].forEach(o => line(hxh + dx * 15 - dy * o * 1.6, hyh + dy * 15 + dx * o * 1.6, hxh + dx * 19 - dy * o * 1.6, hyh + dy * 19 + dx * o * 1.6));
@@ -1217,6 +1482,13 @@
     'Démon': 'horns', 'Gardien du portail': 'horns crystal', 'Gardien de la faille': 'crystal', 'Élémentaire de glace': 'crystal', 'Golem d\'or': 'crystal', 'Colosse céleste': 'crystal', 'Titan du vide': 'horns',
     'Élémentaire de feu': 'flame', 'Séraphin': 'halo', 'Méduse abyssale': 'jelly', 'Entité sans nom': 'many'
   };
+  Object.assign(XT, {
+    'Plante carnivore': '', 'Cerf de lumière': 'mane', 'Gardienne des floraisons': 'halo', 'Golem de racines': 'horns', 'Dryade corrompue': 'robe staff', 'Arbre-monde corrompu': 'horns crystal',
+    'Étincelle vivante': 'flame', 'Automate de bronze': 'horns', 'Molosse d\'acier': 'tusk', 'Marteau-titan': 'horns crystal', 'Titan forgeron': 'crystal', 'Salamandre d\'or': 'croc fire', 'Le Forgeron divin': 'crown cape',
+    'Baleine d\'étoiles': 'croc', 'Kraken stellaire': 'many', 'Méduse nébuleuse': 'jelly', 'Navigateur perdu': 'hood cape', 'Léviathan d\'étoiles': '',
+    'Rouage vivant': 'crystal', 'Sablier hanté': 'flame', 'Chevalier figé': 'horns', 'Horloger fou': 'robe staff', 'Écho de toi': 'cape',
+    'Fragment de lumière': 'halo', 'Sentinelle prismatique': 'crystal', 'Ombre originelle': 'hood', 'Le Premier Monarque': 'crown cape wings', 'L\'Architecte': 'crystal horns'
+  });
   Object.assign(XT, {
     'Épouvantail maudit': 'hood', 'Taureau enragé': 'tusk', 'Pickpocket': 'hood', 'Garde corrompu': 'cape', 'Capitaine de la garde': 'cape', 'Sangsue géante': 'seg',
     'Ent pourri': 'horns', 'Chaman gobelin': 'ears robe staff', 'Seigneur kobold': 'ears crown', 'Aigle géant': 'beak', 'Troll des glaces': 'crystal', 'Chef de guerre orc': 'tusk horns cape',
@@ -1449,5 +1721,5 @@
     drawHero(11, 19, 2, tierIdx(level), 0, false, 0);
   }
 
-  window.RPG = { MAX, need, levelOf, streakMult, sessionXp, TIERS, ZONES, tierIdx, zoneIdx, SMOKE: { n: 'Démon de fumée', l: 1, s: 'ghost', sc: 3, p: gh('#8a8f96', '#ff5d73', '#2a2a30'), fly: true, boss: true }, buildQueue, start, stop, setMode, setBody: b => { BODY = b || 'ok'; }, setLook: (o, w) => { LOOK = { o: o == null ? null : +o, w: w == null ? null : +w }; }, WEAPONS, XO: XO.map(x => x[0]), XW: XW.map(x => x[0]), NT, setSmoke: v => { SMK = Math.max(0, Math.min(1, +v || 0)); }, portrait, tick: dt => { const s = st; if (s) { update(s, dt); if (st === s) draw(s); } } };
+  window.RPG = { MAX, need, levelOf, streakMult, sessionXp, TIERS, ZONES, tierIdx, zoneIdx, SMOKE: { n: 'Démon de fumée', l: 1, s: 'ghost', sc: 3, p: gh('#8a8f96', '#ff5d73', '#2a2a30'), fly: true, boss: true }, buildQueue, start, stop, setMode, setBody: b => { BODY = b || 'ok'; }, setLook: (o, w) => { LOOK = { o: o == null ? null : +o, w: w == null ? null : +w }; }, WEAPONS, XO: XO.map(x => x[0]), XW: XW.map(x => x[0]), NT, tid, setSmoke: v => { SMK = Math.max(0, Math.min(1, +v || 0)); }, portrait, tick: dt => { const s = st; if (s) { update(s, dt); if (st === s) draw(s); } } };
 })();

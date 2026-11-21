@@ -442,7 +442,7 @@
         ['Dix tonnes', '10 tonnes soulevées au total', tons >= 10], ['Cent tonnes', '100 tonnes soulevées', tons >= 100], ['Mille tonnes', '1 000 tonnes soulevées', tons >= 1000]]),
       B('Débrouille', [['Roi du spam', '5 séances spam', cnt('spam') >= 5], ['Sans excuse', '1 séance au poids du corps', cnt('pdc') >= 1], ['Moine guerrier', '10 séances au poids du corps', cnt('pdc') >= 10]]),
       B('Chasseur', [['Chasseur de rang D', 'Niveau 10', lvl >= 10], ['Chasseur de rang C', 'Niveau 20', lvl >= 20], ['Chasseur de rang B', 'Niveau 35', lvl >= 35], ['Chasseur de rang A', 'Niveau 50', lvl >= 50], ['Chasseur de rang S', 'Niveau 75', lvl >= 75], ['Rang national', 'Niveau 100', lvl >= 100],
-        ['Tueur de boss', '1 boss terrassé', boss >= 1], ['Fléau des boss', '5 boss terrassés', boss >= 5], ['Plus aucun boss', 'Tous les boss terrassés', boss >= RPG.ZONES.reduce((x, z) => x + z.m.filter(m => m.boss).length, 0)]]),
+        ['Tueur de boss', '1 boss terrassé', boss >= 1], ['Fléau des boss', '5 boss terrassés', boss >= 5], ['Au-delà du trône', 'Niveau 110', lvl >= 110], ['Maître du temps', 'Niveau 140', lvl >= 140], ['L\'Éveillé', 'Niveau 150', lvl >= 150], ['Plus aucun boss', 'Tous les boss terrassés', boss >= RPG.ZONES.reduce((x, z) => x + z.m.filter(m => m.boss).length, 0)]]),
       B('Sevrage', [['Premier jour', '24 heures sans fumer', qb >= 1], ['Cap du manque', '3 jours sans fumer', qb >= 3], ['Souffle retrouvé', '7 jours sans fumer', qb >= 7], ['Libéré', '30 jours sans fumer', qb >= 30], ['Poumons d\'acier', '100 jours sans fumer', qb >= 100], ['Un an d\'air pur', '365 jours sans fumer', qb >= 365],
         ['Dompteur de démon', '10 envies surmontées', (q.wins || 0) >= 10], ['Exorciste', '50 envies surmontées', (q.wins || 0) >= 50]]),
       B('Nutrition', [['Carnet ouvert', '1 repas enregistré', foods().length >= 1], ['Semaine suivie', '7 jours avec des repas enregistrés', fd >= 7], ['Mois suivi', '30 jours avec des repas enregistrés', fd >= 30], ['Pesée régulière', '4 pesées', S.body.length >= 4], ['Objectif atteint', 'Poids cible atteint', !!w && w.kg <= nut().goalKg]])
@@ -452,7 +452,7 @@
   const XU_O = ['Habitué', 'Inarrêtable', 'Moine guerrier', 'Fléau des boss', 'Libéré', 'Vétéran', 'Chasseur de rang A', 'Centurion'];
   const XU_W = ['Premier record', 'Régulier', 'Acharné', 'Briseur de records', 'Cent tonnes', 'Dompteur de démon', 'Souffle retrouvé', 'Chasseur de rang C'];
   const gotSet = () => new Set(badges().filter(b => b[2]).map(b => b[0]));
-  const lookOk = (v, kind, got) => v == null || v < RPG.NT || (got || gotSet()).has((kind === 'o' ? XU_O : XU_W)[v - RPG.NT]);
+  const lookOk = (v, kind, got) => v == null || v < RPG.NT || v >= 100 || (got || gotSet()).has((kind === 'o' ? XU_O : XU_W)[v - RPG.NT]);
   // annonce les succès nouvellement obtenus (silencieux au premier passage, pour ne pas tout annoncer d'un coup)
   function achSync() {
     const got = badges().filter(b => b[2]).map(b => b[0]);
@@ -489,13 +489,13 @@
       return `<div class="zone ${open ? '' : 'lock'} ${i === cz ? 'cur' : ''}"><div class="row sp"><b>${open ? esc(z.n) : 'Zone inconnue'}</b><span class="row" style="gap:6px">${open ? (i === cz ? '<span class="chip ok">Tu es ici</span>' : `<button class="chip btnchip" data-act="zoneGo" data-z="${i}">Y aller</button>`) : ''}<span class="chip ${done ? 'ok' : ''}">${done ? 'Terminée' : open ? 'En cours' : 'Niveau ' + z.l}</span></span></div>
         ${open ? `<ul>${z.m.map(m => `<li class="${m.l <= L ? 'won' : ''}"><span>${m.boss ? '<b class="boss">Boss</b>' : ''}${esc(m.n)}</span><small>${m.l <= L ? (m.boss ? 'terrassé' : 'vaincu') : 'niveau ' + m.l}</small></li>`).join('')}</ul>` : ''}</div>`;
     }).join('');
-    const gs3 = gotSet(), okv = (v, k) => v != null && (v >= RPG.NT ? lookOk(v, k, gs3) : v <= ti);
-    const wo = okv(ad.outfit, 'o') ? ad.outfit : ti, ww = okv(ad.weapon, 'w') ? ad.weapon : ti;
+    const gs3 = gotSet(), okv = (v, k) => v != null && (v >= 100 ? v - 100 <= ti : v >= RPG.NT ? lookOk(v, k, gs3) : v <= ti);
+    const wo = okv(ad.outfit, 'o') ? ad.outfit : RPG.tid(ti), ww = okv(ad.weapon, 'w') ? ad.weapon : RPG.tid(ti);
     const cond = n => { const b = badges().find(x => x[0] === n); return b ? b[1] : ''; };
     const xo = RPG.XO.map((n, j) => { const i = RPG.NT + j, ok = gs3.has(XU_O[j]); return `<div class="rk eq ${ok ? '' : 'lock'}"><div class="grow"><b class="${ok ? '' : 'mut'}">${esc(n)}</b><div class="mut" style="font-size:12.5px">${ok ? 'Tenue spéciale' : 'Succès « ' + esc(XU_O[j]) + ' » : ' + esc(cond(XU_O[j]))}</div></div>${ok ? `<div class="eqb"><button class="chip btnchip ${i === wo ? 'ok' : ''}" data-act="lookSet" data-k="outfit" data-v="${i}">Porter</button></div>` : ''}</div>`; }).join('');
     const xw = RPG.XW.map((n, j) => { const i = RPG.NT + j, ok = gs3.has(XU_W[j]); return `<div class="rk eq ${ok ? '' : 'lock'}"><div class="grow"><b class="${ok ? '' : 'mut'}">${esc(n)}</b><div class="mut" style="font-size:12.5px">${ok ? 'Arme spéciale' : 'Succès « ' + esc(XU_W[j]) + ' » : ' + esc(cond(XU_W[j]))}</div></div>${ok ? `<div class="eqb"><button class="chip btnchip ${i === ww ? 'ok' : ''}" data-act="lookSet" data-k="weapon" data-v="${i}">Équiper</button></div>` : ''}</div>`; }).join('');
     const tiers = RPG.TIERS.map((t, i) => L >= t.l
-      ? `<div class="rk eq"><div class="grow"><b>${esc(t.t)}</b><div class="mut" style="font-size:12.5px">${esc(t.g)}</div></div><div class="eqb"><button class="chip btnchip ${i === wo ? 'ok' : ''}" data-act="lookSet" data-k="outfit" data-v="${i}">Tenue</button><button class="chip btnchip ${i === ww ? 'ok' : ''}" data-act="lookSet" data-k="weapon" data-v="${i}">${esc(RPG.WEAPONS[i])}</button></div></div>`
+      ? `<div class="rk eq"><div class="grow"><b>${esc(t.t)}</b><div class="mut" style="font-size:12.5px">${esc(t.g)}</div></div><div class="eqb"><button class="chip btnchip ${RPG.tid(i) === wo ? 'ok' : ''}" data-act="lookSet" data-k="outfit" data-v="${RPG.tid(i)}">Tenue</button><button class="chip btnchip ${RPG.tid(i) === ww ? 'ok' : ''}" data-act="lookSet" data-k="weapon" data-v="${RPG.tid(i)}">${esc(RPG.WEAPONS[i])}</button></div></div>`
       : `<div class="rk"><div class="grow"><b class="mut">???</b><div class="mut" style="font-size:12.5px">Se débloque au niveau ${t.l}</div></div></div>`).join('');
     const all = badges(), nb = all.filter(b => b[2]).length; let grp = '';
     const bd = all.map(b => { const h = b[3] !== grp ? `<div class="sec"><span>${esc(grp = b[3])}</span></div>` : ''; return h + (b[2]
@@ -517,7 +517,7 @@
         <li>La série ne dépend pas du planning. Un jour sans séance est toléré ; elle casse après deux jours sans séance d'affilée, ou si tu alternes un jour sur deux (repos, séance, repos).</li>
         <li>Sevrage : 5 XP par jour sans fumer, un bonus à chaque palier (10 à 500 XP), 2 XP par envie surmontée (3 par jour au plus). C'est volontairement moins que la salle : sur un an, le sevrage pèse environ 10 % de ton XP.</li>
         <li>Les séances spam et poids du corps comptent comme les autres, pour l'XP comme pour la série de jours : ce sont les séries validées qui paient, et le bonus de séance complète s'applique au poids du corps.</li>
-        <li>Niveau maximum : <b>100</b>. À rythme régulier (environ 4 séances par semaine), compte à peu près un an pour le niveau 50 et quatre ans pour le niveau 100.</li></ul></details>
+        <li>Niveau maximum : <b>150</b>. À rythme régulier (environ 4 séances par semaine), compte à peu près un an pour le niveau 50 et quatre ans pour le niveau 100. Au-delà du trône, chaque niveau demande environ un mois.</li></ul></details>
       <div class="sect-h"><h2>Le voyage</h2></div><p class="mut" style="font-size:12.5px;margin:-4px 2px 8px">Retourne dans un monde déjà débloqué quand tu veux.</p>${zones}
       <div class="sect-h"><h2>Équipement</h2>${ad.outfit != null || ad.weapon != null ? '<button class="btn sm ghost" data-act="lookReset">Le plus récent</button>' : ''}</div><p class="mut" style="font-size:12.5px;margin:-4px 2px 8px">Choisis une tenue et une arme parmi celles débloquées. Tu peux les combiner.</p>${tiers}
       <div class="sect-h"><h2>Tenues spéciales</h2><span class="chip">${RPG.XO.filter((n, j) => gs3.has(XU_O[j])).length} / ${RPG.XO.length}</span></div>${xo}
