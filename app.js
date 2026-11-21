@@ -460,32 +460,40 @@
   function mountGame() {
     const Lr = RPG.levelOf(totalXp()), L = seenLvl(Lr), bf = bodyForm();
     RPG.setBody(bf.k);
+    { const ad = S.adv || {}; RPG.setLook(ad.outfit, ad.weapon); }
     const qq = quit(); RPG.setSmoke(qq.start ? Math.max(0, 1 - quitDays() / 30) : (qq.slips ? 1 : 0));
     document.querySelectorAll('canvas[data-me]').forEach(c => RPG.portrait(c, L));
     const c = $('#adv'); if (!c) { RPG.stop(); return; }
     const now = new Date(), mon = new Date(now), last = S.logs[S.logs.length - 1]; mon.setDate(now.getDate() - (now.getDay() + 6) % 7); let did = 0;
     for (let i = 0; i < 7; i++) { const d = new Date(mon); d.setDate(mon.getDate() + i); if (S.logs.some(l => logDay(l) === isoDay(d))) did++; }
     const stats = { n: S.logs.length, streak: streakNow(), did, planned: S.week.filter(d => d.p).length, full: !!(last && last.full), spam: !!(last && last.spam), pdc: !!(last && last.pdc), body: bf.k, quit: { on: !!qq.start, days: quitDays(), wins: qq.wins, slips: qq.slips }, sets: last ? last.ex.reduce((n, e) => n + e.sets.length, 0) : 0, rec: (last && last.rec) || 0, days: last ? Math.floor((Date.now() - Date.parse(last.date)) / 864e5) : 0 };
-    RPG.start(c, { level: L, target: Lr, cap: $('#advcap'), name: S.name, real: S.opts.gfx === 'real', stats, duel: quit().duel ? RPG.SMOKE : null, onDuel: () => { quit().duel = false; save(); },
-      onSeen: l => { S.adv = { seen: l }; save(); },
+    RPG.start(c, { level: L, target: Lr, cap: $('#advcap'), name: S.name, real: S.opts.gfx === 'real', stats, zone: S.adv && S.adv.zone, duel: quit().duel ? RPG.SMOKE : null, onDuel: () => { quit().duel = false; save(); },
+      onSeen: l => { const p = (S.adv && S.adv.seen) || 1; S.adv = Object.assign(S.adv || {}, { seen: l });
+        if (RPG.zoneIdx(l) > RPG.zoneIdx(p)) S.adv.zone = null;   // nouvelle zone débloquée : on y va
+        if (RPG.tierIdx(l) > RPG.tierIdx(p)) { S.adv.outfit = null; S.adv.weapon = null; }   // nouvelle tenue : on la porte
+        save(); },
       onDone: () => { if (V.tab === 'adv' && !top()) render(); } });
   }
   function advView() {
     const xp = totalXp(), Lr = RPG.levelOf(xp), L = seenLvl(Lr), pending = Lr > L, xa = RPG.need(L), xb = RPG.need(L + 1), ti = RPG.tierIdx(L), zi = RPG.zoneIdx(L);
     const stk = streakNow(), today = S.logs.some(l => logDay(l) === todayISO()), nextMult = RPG.streakMult(Math.max(1, today ? stk : stk + 1));
     const beaten = RPG.ZONES.reduce((n, z) => n + z.m.filter(m => m.l <= L).length, 0), total = RPG.ZONES.reduce((n, z) => n + z.m.length, 0);
+    const ad = S.adv || {}, cz = ad.zone != null && ad.zone <= zi ? ad.zone : zi;
     const zones = RPG.ZONES.map((z, i) => {
       const open = L >= z.l, done = z.m.every(m => m.l <= L);
-      return `<div class="zone ${open ? '' : 'lock'} ${i === zi ? 'cur' : ''}"><div class="row sp"><b>${open ? esc(z.n) : 'Zone inconnue'}</b><span class="chip ${done ? 'ok' : ''}">${done ? 'Terminée' : open ? 'En cours' : 'Niveau ' + z.l}</span></div>
+      return `<div class="zone ${open ? '' : 'lock'} ${i === cz ? 'cur' : ''}"><div class="row sp"><b>${open ? esc(z.n) : 'Zone inconnue'}</b><span class="row" style="gap:6px">${open ? (i === cz ? '<span class="chip ok">Tu es ici</span>' : `<button class="chip btnchip" data-act="zoneGo" data-z="${i}">Y aller</button>`) : ''}<span class="chip ${done ? 'ok' : ''}">${done ? 'Terminée' : open ? 'En cours' : 'Niveau ' + z.l}</span></span></div>
         ${open ? `<ul>${z.m.map(m => `<li class="${m.l <= L ? 'won' : ''}"><span>${m.boss ? '<b class="boss">Boss</b>' : ''}${esc(m.n)}</span><small>${m.l <= L ? (m.boss ? 'terrassé' : 'vaincu') : 'niveau ' + m.l}</small></li>`).join('')}</ul>` : ''}</div>`;
     }).join('');
-    const tiers = RPG.TIERS.map((t, i) => `<div class="rk"><div class="grow"><b>${L >= t.l ? esc(t.t) : '???'}</b><div class="mut" style="font-size:12.5px">${L >= t.l ? esc(t.g) : 'Se débloque au niveau ' + t.l}</div></div>${i === ti ? '<span class="tagc">Actuel</span>' : ''}</div>`).join('');
+    const wo = ad.outfit != null && ad.outfit <= ti ? ad.outfit : ti, ww = ad.weapon != null && ad.weapon <= ti ? ad.weapon : ti;
+    const tiers = RPG.TIERS.map((t, i) => L >= t.l
+      ? `<div class="rk eq"><div class="grow"><b>${esc(t.t)}</b><div class="mut" style="font-size:12.5px">${esc(t.g)}</div></div><div class="eqb"><button class="chip btnchip ${i === wo ? 'ok' : ''}" data-act="lookSet" data-k="outfit" data-v="${i}">Tenue</button><button class="chip btnchip ${i === ww ? 'ok' : ''}" data-act="lookSet" data-k="weapon" data-v="${i}">${esc(RPG.WEAPONS[i])}</button></div></div>`
+      : `<div class="rk"><div class="grow"><b class="mut">???</b><div class="mut" style="font-size:12.5px">Se débloque au niveau ${t.l}</div></div></div>`).join('');
     const all = badges(), nb = all.filter(b => b[2]).length; let grp = '';
     const bd = all.map(b => { const h = b[3] !== grp ? `<div class="sec"><span>${esc(grp = b[3])}</span></div>` : ''; return h + (b[2]
       ? `<button class="rk ach" data-act="titleSet" data-v="${esc(b[0])}"><div class="grow"><b>${esc(b[0])}</b><div class="mut" style="font-size:12.5px">${esc(b[1])}</div></div><span class="chip ${S.title === b[0] ? 'ok' : ''}">${S.title === b[0] ? 'Titre porté' : 'Porter'}</span></button>`
       : `<div class="rk ach lock"><div class="grow"><b class="mut">${esc(b[0])}</b><div class="mut" style="font-size:12.5px">${esc(b[1])}</div></div></div>`); }).join('');
     return `<div class="sect-h first"><h2>Aventure</h2><button class="btn sm ghost" data-act="gfx">Style : ${S.opts.gfx === 'real' ? 'Réaliste' : 'Pixel'}</button></div>
-      <div class="scene"><div class="hud"><b>NIV. ${L}</b><span>${esc(RPG.TIERS[ti].t)}</span><div class="xp"><i style="width:${Math.min(100, L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div><div class="hp"><i style="width:100%"></i></div><small class="hpt">PV</small></div>${pending ? '<button class="skip" data-act="advSkip">Passer</button>' : ''}<canvas id="adv" width="144" height="128"></canvas><div id="advcap" class="cap">${esc(S.name)} avance dans ${esc(RPG.ZONES[zi].n.toLowerCase())}.</div></div>
+      <div class="scene"><div class="hud"><b>NIV. ${L}</b><span>${esc(RPG.TIERS[ti].t)}</span><div class="xp"><i style="width:${Math.min(100, L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div><div class="hp"><i style="width:100%"></i></div><small class="hpt">PV</small></div>${pending ? '<button class="skip" data-act="advSkip">Passer</button>' : ''}<canvas id="adv" width="144" height="128"></canvas><div id="advcap" class="cap">${esc(S.name)} avance dans ${esc(RPG.ZONES[cz].n.toLowerCase())}.</div></div>
       <div class="card me"><canvas data-me class="px" width="40" height="48"></canvas><div class="grow"><div class="eyebrow">Niveau ${L}</div><h3>${esc(S.name)}, ${esc(RPG.TIERS[ti].t)}</h3>${S.title ? `<div class="ttl">« ${esc(S.title)} »</div>` : ''}
         <div class="xp"><i style="width:${Math.min(100, L >= RPG.MAX ? 100 : Math.round((xp - xa) / (xb - xa) * 100))}%"></i></div><p class="mut" style="font-size:12.5px">${pending ? 'Montée de niveau en cours…' : L >= RPG.MAX ? xp + ' XP · niveau maximum atteint' : (xp - xa) + ' / ' + (xb - xa) + ' XP · niveau ' + (L + 1) + ' dans ' + (xb - xp) + ' XP'}</p></div></div>
       ${quitCard()}
@@ -501,8 +509,8 @@
         <li>Sevrage : 5 XP par jour sans fumer, un bonus à chaque palier (10 à 500 XP), 2 XP par envie surmontée (3 par jour au plus). C'est volontairement moins que la salle : sur un an, le sevrage pèse environ 10 % de ton XP.</li>
         <li>Les séances spam et poids du corps comptent comme les autres, pour l'XP comme pour la série de jours : ce sont les séries validées qui paient, et le bonus de séance complète s'applique au poids du corps.</li>
         <li>Niveau maximum : <b>100</b>. À rythme régulier (environ 4 séances par semaine), compte à peu près un an pour le niveau 50 et quatre ans pour le niveau 100.</li></ul></details>
-      <div class="sect-h"><h2>Le voyage</h2></div>${zones}
-      <div class="sect-h"><h2>Équipement</h2></div>${tiers}
+      <div class="sect-h"><h2>Le voyage</h2></div><p class="mut" style="font-size:12.5px;margin:-4px 2px 8px">Retourne dans un monde déjà débloqué quand tu veux.</p>${zones}
+      <div class="sect-h"><h2>Équipement</h2>${ad.outfit != null || ad.weapon != null ? '<button class="btn sm ghost" data-act="lookReset">Le plus récent</button>' : ''}</div><p class="mut" style="font-size:12.5px;margin:-4px 2px 8px">Choisis une tenue et une arme parmi celles débloquées. Tu peux les combiner.</p>${tiers}
       <div class="sect-h"><h2>Succès</h2><span class="chip">${nb} / ${all.length}</span></div><p class="mut" style="font-size:12.5px;margin:-4px 2px 4px">Touche un succès obtenu pour le porter comme titre.</p>${bd}`;
   }
 
@@ -574,6 +582,11 @@
     ['Whey au lait demi-écrémé', '30 g + 300 ml', 260, 34, 'Le plus gros apport en une boisson'],
     ['Yaourt à boire protéiné', '1 bouteille', 130, 20, 'Rayon frais, environ 20-25 g selon la marque : regarde l\'étiquette'],
     ['Lait protéiné', '500 ml', 230, 30, 'Lait enrichi en protéines, rayon frais ou sport'],
+    ['Danone HiPRO à boire', '1 bouteille', 150, 22, 'Rayon frais. Valeurs approximatives : touche le repas pour corriger'],
+    ['Barebells Protein Milkshake', '1 brique', 150, 24, 'Valeurs approximatives : vérifie l\'étiquette'],
+    ['Arla Protein (boisson)', '1 bouteille', 160, 22, 'Valeurs approximatives : vérifie l\'étiquette'],
+    ['Milkshake protéiné (Grenade, Myprotein…)', '1 bouteille', 160, 25, 'En ligne ou en magasin de sport'],
+    ['Boisson high protein marque distributeur', '1 bouteille', 150, 22, 'Lidl, Aldi, Carrefour : souvent la moins chère'],
     ['Thon au naturel', '1 boîte', 110, 25, ''], ['Blanc de dinde ou jambon blanc', '2 tranches', 60, 12, ''],
     ['Pop-corn nature maison', '30 g', 120, 3, 'Sans huile. Énorme volume, idéal devant un écran'], ['Clémentines', '3', 110, 2, 'Occupe les mains et le temps'],
     ['Crudités + dip de fromage blanc', 'à volonté', 50, 4, ''], ['Cornichons', 'à volonté', 10, 0, 'Pour l\'envie de salé'],
@@ -933,6 +946,9 @@ Sans photo, estime à partir de la description : quand la quantité est vague (�
   }
   const persoKeep = () => { document.querySelectorAll('[data-pp]').forEach(c => { const i = PER.sel.indexOf(c.dataset.pp); if (c.checked && i < 0) PER.sel.push(c.dataset.pp); if (!c.checked && i >= 0) PER.sel.splice(i, 1); }); const n = parseInt(($('#ppn') || {}).value); if (n > 0) PER.n = n; };
   const A = {
+    zoneGo(t) { S.adv = Object.assign(S.adv || {}, { zone: +t.dataset.z }); save(); render(); window.scrollTo(0, 0); },
+    lookSet(t) { S.adv = S.adv || {}; S.adv[t.dataset.k] = +t.dataset.v; save(); render(); },
+    lookReset() { S.adv = Object.assign(S.adv || {}, { outfit: null, weapon: null }); save(); render(); },
     chrono(t) {
       unlockAudio();
       const pr = progById(S.cur.prog), e = pr.ex.find(x => x.id === t.dataset.ex), s = S.cur.sets[e.id][+t.dataset.i];
@@ -1063,7 +1079,7 @@ Sans photo, estime à partir de la description : quand la quantité est vague (�
     },
     toAdv() { closeSheet(); setTab('adv'); },
     gfx(t) { const real = S.opts.gfx !== 'real'; S.opts.gfx = real ? 'real' : 'pixel'; save(); RPG.setMode(real); t.textContent = 'Style : ' + (real ? 'Réaliste' : 'Pixel'); },
-    advSkip() { S.adv = { seen: RPG.levelOf(totalXp()) }; save(); render(); },
+    advSkip() { S.adv = Object.assign(S.adv || {}, { seen: RPG.levelOf(totalXp()), zone: null, outfit: null, weapon: null }); save(); render(); },
     spam() {
       const seen = {}, list = [];
       S.programs.forEach(p => p.ex.forEach(e => { const k = norm(e.n); if (e.kind !== 'c' && !seen[k]) { seen[k] = 1; list.push(e); } }));

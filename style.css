@@ -382,3 +382,7 @@ textarea.fi{resize:vertical;font-family:inherit}
 .tm.work{border-color:var(--v);box-shadow:0 12px 40px rgba(0,0,0,.7),0 0 26px rgba(139,108,255,.55)}
 .tm.work .bar i{background:var(--v);box-shadow:0 0 8px var(--v)}
 .tm.work .t{text-shadow:0 0 14px rgba(139,108,255,.8)}
+
+.rk.eq{flex-wrap:wrap}
+.eqb{display:flex;gap:6px;flex-wrap:wrap;width:100%;margin-top:6px}
+.eqb .chip{padding:5px 10px}

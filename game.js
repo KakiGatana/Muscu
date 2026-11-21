@@ -167,8 +167,15 @@
   function spr(rows, pal, x, y, sc) {
     for (let j = 0; j < rows.length; j++) for (let i = 0; i < rows[j].length; i++) { const c = pal[rows[j][i]]; if (c) { g.fillStyle = c; g.fillRect(x + i * sc, y + j * sc, sc, sc); } }
   }
+  // apparence choisie : tenue et arme parmi celles débloquées (sinon les dernières obtenues)
+  let LOOK = { o: null, w: null };
+  function lookP(tier) {
+    const o = LOOK.o != null && LOOK.o <= tier ? LOOK.o : tier, wv = LOOK.w != null && LOOK.w <= tier ? LOOK.w : tier;
+    return wv === o ? HP[o] : Object.assign({}, HP[o], { w: HP[wv].w });
+  }
+  const WEAPONS = ['Fourche', 'Dague', 'Épée courte', 'Épée', 'Épée longue', 'Épée longue dorée', 'Deux dagues d\'ombre', 'Lame d\'énergie', 'Espadon de flammes', 'Lame sacrée', 'Lames d\'ombre', 'Lame du vide', 'Lame solaire', 'Lame d\'aurore', 'Lame de lumière pure'];
   function drawHero(x, y, sc, tier, frame, atk, t) {
-    const P = HP[tier], w = P.w, hx = x + 9 * sc, f2 = Math.floor(t * 4) % 2;
+    const P = lookP(tier), w = P.w, hx = x + 9 * sc, f2 = Math.floor(t * 4) % 2;
     if (SMK > 0) { g.globalAlpha = .55; for (let k = 0; k < Math.ceil(SMK * 9); k++) { const r = (t * (3 + hash(k) * 3) + hash(k + 4) * 9) % 9; R(k % 2 ? '#8a8f96' : '#6b6f76', x + (1 + hash(k + 1) * 8 + Math.sin(t * 2 + k) * 1.2) * sc, y + (3 - r) * sc, sc, sc); } g.globalAlpha = 1; }
     if (P.aura) for (let k = 0; k < 9; k++) { const n = k + Math.floor(t * 5) * 13; R(P.aura === 'rb' ? RB[(k + Math.floor(t * 5)) % RB.length] : P.aura, x - 3 * sc + hash(n) * 16 * sc, y - 3 * sc + hash(n + 5) * 16 * sc, sc / 2, sc / 2); }
     if (P.wings) { R(P.wings, x - 3 * sc, y + (2 - f2) * sc, 3 * sc, sc); R(P.wings, x - 5 * sc, y + (3 - f2) * sc, 5 * sc, sc); R(P.wings, x - 4 * sc, y + (4 - f2) * sc, 4 * sc, sc); R(P.wings, x - 3 * sc, y + (5 - f2) * sc, 3 * sc, sc); R(P.wings, x - 2 * sc, y + (6 - f2) * sc, 2 * sc, sc); }
@@ -1089,7 +1096,7 @@
     const v = g.createRadialGradient(W / 2, H * .52, H * .3, W / 2, H * .52, H * .86); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(0,0,0,.66)'); g.fillStyle = v; g.fillRect(0, 0, W, H);
   }
   function heroReal(x, tier, walking, atk, ak, T) {
-    const P = HP[tier], w = P.w, fy = GY, sw = walking ? Math.sin(T * 10) : 0, bob = walking ? Math.abs(Math.sin(T * 10)) * .8 : Math.sin(T * 2) * .3;
+    const P = lookP(tier), w = P.w, fy = GY, sw = walking ? Math.sin(T * 10) : 0, bob = walking ? Math.abs(Math.sin(T * 10)) * .8 : Math.sin(T * 2) * .3;
     const cx = x + 10, hipY = fy - 12 - bob, shY = fy - 21.5 - bob, hdY = fy - 25.2 - bob;
     const line = (x1, y1, x2, y2) => { g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke(); };
     g.lineCap = 'round'; g.lineJoin = 'round';
@@ -1352,7 +1359,7 @@
     let level = o.level; const target = Math.max(level, o.target || level);
     const still = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (still && target > level) { level = target; if (o.onSeen) o.onSeen(target); }   // sans animations : on acte directement
-    const s = st = { canvas, ctx, real, K, box: canvas.parentNode, cap: o.cap, name: o.name || 'Le héros', onSeen: o.onSeen, onDone: o.onDone, level, z: zoneIdx(level), tier: tierIdx(level),
+    const s = st = { canvas, ctx, real, K, box: canvas.parentNode, cap: o.cap, name: o.name || 'Le héros', onSeen: o.onSeen, onDone: o.onDone, level, z: o.zone != null && o.zone <= zoneIdx(level) ? o.zone : zoneIdx(level), tier: tierIdx(level),
       queue: buildQueue(level, target), ev: null, phase: 'walk', t: 0, time: 0, sx: 0, m: null, mx: 0, sparks: [], fx: [], hp: 1, lastHit: -9, hpShown: -1, hdodge: -9, hparry: -9, npc: null, enc: 0, talk: 0, said: [], stats: o.stats || null, parts: [], pt0: 0, n: 0, shake: 0, mflash: 0, hhit: -9, charge: 0, hits: 0, doneAt: 0 };
     if (o.duel && !still) s.queue.unshift({ t: 'boss', m: o.duel, cb: o.onDuel });   // l'envie surmontée se rejoue en combat
     let last = performance.now();
@@ -1371,5 +1378,5 @@
     drawHero(11, 19, 2, tierIdx(level), 0, false, 0);
   }
 
-  window.RPG = { MAX, need, levelOf, streakMult, sessionXp, TIERS, ZONES, tierIdx, zoneIdx, SMOKE: { n: 'Démon de fumée', l: 1, s: 'ghost', sc: 3, p: gh('#8a8f96', '#ff5d73', '#2a2a30'), fly: true, boss: true }, buildQueue, start, stop, setMode, setBody: b => { BODY = b || 'ok'; }, setSmoke: v => { SMK = Math.max(0, Math.min(1, +v || 0)); }, portrait, tick: dt => { const s = st; if (s) { update(s, dt); if (st === s) draw(s); } } };
+  window.RPG = { MAX, need, levelOf, streakMult, sessionXp, TIERS, ZONES, tierIdx, zoneIdx, SMOKE: { n: 'Démon de fumée', l: 1, s: 'ghost', sc: 3, p: gh('#8a8f96', '#ff5d73', '#2a2a30'), fly: true, boss: true }, buildQueue, start, stop, setMode, setBody: b => { BODY = b || 'ok'; }, setLook: (o, w) => { LOOK = { o: o == null ? null : +o, w: w == null ? null : +w }; }, WEAPONS, setSmoke: v => { SMK = Math.max(0, Math.min(1, +v || 0)); }, portrait, tick: dt => { const s = st; if (s) { update(s, dt); if (st === s) draw(s); } } };
 })();
