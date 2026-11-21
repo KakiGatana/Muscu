@@ -119,6 +119,24 @@
       ['Colosse céleste', 97, 'golem', 5, go('#fff6d8', '#e0b04a', '#ff7ad9')],
       ['Le Souverain', 100, 'human', 5, hu('#ffd76a', '#1a1040', '#fff', '#3a1a7a', '#ff7ad9', '#120a30'), 'B']])
   ];
+  // nouveaux monstres et un second boss par zone, rangés par niveau dans leur zone
+  const MORE = [
+    [['Serpent des blés', 2, 'quad', 1, q('#6a8a3a', '#4a6a2a', '#ffd84a', '#fff')], ['Épouvantail maudit', 3, 'human', 2, hu('#c9a24a', '#d9b46a', '#ff5a1a', '#6a5a3a', '#8a6a3f', '#4a3a2a')], ['Taureau enragé', 4, 'quad', 3, q('#3a2a22', '#2a1c16', '#ff3b3b', '#f2e9d8'), 'B']],
+    [['Pickpocket', 5, 'human', 2, hu('#3a3a46', '#d9a57c', '#111', '#4a4a56', '#b9c0c7', '#2a2a32')], ['Garde corrompu', 7, 'human', 2, hu('#6a6f78', '#d9a57c', '#111', '#3a4a6a', '#c3c9cf', '#22283a')], ['Capitaine de la garde', 8, 'human', 3, hu('#8a8f96', '#d9a57c', '#c0392b', '#2a3a6a', '#e6ebf0', '#1a2240'), 'B']],
+    [['Sangsue géante', 10, 'slime', 2, sl('#5a2a3a', '#a05a6a', '#ffd84a', '#2a0a14')], ['Spectre noyé', 13, 'ghost', 2, gh('#4fa58a', '#d8fff0', '#1f5a48'), 'f'], ['Hydre des égouts', 13, 'dragon', 3, dr('#3f6b3a', '#7fae4a', '#ffd84a', '#9fe08a', '#2f5230'), 'B']],
+    [['Ent pourri', 17, 'golem', 3, go('#4a3a2a', '#3a5a2a', '#9fe08a')], ['Chaman gobelin', 18, 'human', 2, hu('#5f8a3a', '#7fae4a', '#ffd84a', '#7a3a2a', '#9fe08a', '#3a2c22')], ['Reine araignée', 18, 'spider', 4, sp('#3a1a3a', '#ff3b3b', '#5a2a5a'), 'B']],
+    [['Mineur fantôme', 24, 'ghost', 2, gh('#c9a24a', '#fff3b0', '#5a4026'), 'f'], ['Scarabée de cristal', 26, 'spider', 3, sp('#1f4a5a', '#6fe3ff', '#3aa7c9')], ['Seigneur kobold', 25, 'human', 3, hu('#8a4a2a', '#b9683a', '#6fe3ff', '#5a2a1a', '#6fe3ff', '#3a2c22'), 'B']],
+    [['Aigle géant', 31, 'bat', 3, bt('#6a4a2a', '#ffd84a', '#8a6a4a'), 'f'], ['Troll des glaces', 34, 'golem', 3, go('#a9c6e2', '#7fa6cf', '#3a8fd9')], ['Chef de guerre orc', 32, 'human', 3, hu('#2f4a2a', '#5f8a4a', '#ff4a4a', '#6a1a1a', '#c3c9cf', '#2e241b'), 'B']],
+    [['Golem de magma', 39, 'golem', 3, go('#2a1210', '#ff6a1a', '#ffd84a')], ['Phénix noir', 42, 'bat', 3, bt('#1a0a0a', '#ff8a2a', '#3a1210'), 'f'], ['Wyrm de lave', 40, 'dragon', 4, dr('#3a0e0a', '#ff6a1a', '#ffd84a', '#ffb040', '#5a1a10'), 'B']],
+    [['Chauve-souris vampire', 45, 'bat', 2, bt('#2a0a14', '#ff3b3b', '#4a1020'), 'f'], ['Armure vivante', 47, 'human', 3, hu('#5a5a66', '#3a3a46', '#7fe7ff', '#4a4a56', '#c3c9cf', '#2a2a34')], ['Comte vampire', 49, 'human', 3, hu('#0d0d14', '#e6dcd6', '#ff3b3b', '#2a0a14', '#c3c9cf', '#14080c'), 'B']],
+    [['Chevalier d\'ombre', 55, 'human', 3, hu('#120a22', '#1e1238', '#b388ff', '#1a1030', '#8b6cff', '#0d0818')], ['Œil des ténèbres', 57, 'eye', 3, ey('#1a0d2e', '#d6c4ff', '#8b6cff', '#05030b'), 'f'], ['Maréchal des ombres', 57, 'human', 3, hu('#0d0818', '#2a1a55', '#e6dcff', '#160d2a', '#b388ff', '#0d0818'), 'B']],
+    [['Valkyrie', 63, 'human', 2, hu('#ffd76a', '#f0d0b0', '#4da3ff', '#c3c9cf', '#fff3b0', '#8a8f96')], ['Griffon', 65, 'quad', 3, q('#c9a27c', '#f4f1e6', '#ffd84a', '#e0b04a')], ['Gardien solaire', 65, 'golem', 4, go('#e0b04a', '#fff3b0', '#ff7a1a'), 'B']],
+    [['Requin abyssal', 71, 'quad', 3, q('#2a4a6a', '#9ab0c4', '#ff3b3b', '#fff')], ['Sirène noire', 73, 'human', 2, hu('#0a2a3a', '#7ab0c0', '#6fe3ff', '#0a3a4a', '#6fe3ff', '#06202a')], ['Léviathan', 73, 'dragon', 5, dr('#0a2a4a', '#1a5a7a', '#6fe3ff', '#9ad6ff', '#06203a'), 'B']],
+    [['Glitch', 79, 'slime', 3, sl('#6fe3ff', '#ff4ad9', '#12021f', '#ff4ad9')], ['Arpenteur', 81, 'spider', 3, sp('#22043a', '#6fe3ff', '#ff4ad9')], ['Reflet du chasseur', 81, 'human', 3, hu('#0a0214', '#22043a', '#6fe3ff', '#12021f', '#6fe3ff', '#06000c'), 'B']],
+    [['Méduse stellaire', 87, 'tentacle', 3, gh('#5a4ab8', '#ffffff', '#9ad6ff'), 'f'], ['Golem astéroïde', 89, 'golem', 4, go('#3a3a4e', '#6a6a8a', '#6fe3ff')], ['Mangeur de mondes', 89, 'eye', 5, ey('#1a0a2a', '#ffe9c8', '#ff4ad9', '#000'), 'fB']],
+    [['Garde céleste', 94, 'human', 3, hu('#fff6d8', '#f0d0b0', '#4da3ff', '#e0b04a', '#ffffff', '#c8963a')], ['Sphinx étoilé', 96, 'quad', 4, q('#e6dcff', '#b388ff', '#ffd84a', '#fff')], ['Ange de l\'aube', 98, 'ghost', 3, gh('#fff0f6', '#ff7ad9', '#e0b04a'), 'f'], ['Champion du trône', 98, 'human', 3, hu('#e0b04a', '#f0d0b0', '#ff7ad9', '#3a1a7a', '#ffffff', '#1a1040'), 'B']]
+  ];
+  MORE.forEach((list, i) => { list.forEach(m => ZONES[i].m.push({ n: m[0], l: m[1], s: m[2], sc: m[3], p: m[4], fly: /f/.test(m[5] || ''), boss: /B/.test(m[5] || '') })); ZONES[i].m.sort((x, y) => x.l - y.l || (x.boss ? 1 : 0) - (y.boss ? 1 : 0)); });
   const idx = (arr, l) => { let i = 0; arr.forEach((t, k) => { if (l >= t.l) i = k; }); return i; };
   const tierIdx = l => idx(TIERS, l), zoneIdx = l => idx(ZONES, l);
 
@@ -1199,6 +1217,13 @@
     'Démon': 'horns', 'Gardien du portail': 'horns crystal', 'Gardien de la faille': 'crystal', 'Élémentaire de glace': 'crystal', 'Golem d\'or': 'crystal', 'Colosse céleste': 'crystal', 'Titan du vide': 'horns',
     'Élémentaire de feu': 'flame', 'Séraphin': 'halo', 'Méduse abyssale': 'jelly', 'Entité sans nom': 'many'
   };
+  Object.assign(XT, {
+    'Épouvantail maudit': 'hood', 'Taureau enragé': 'tusk', 'Pickpocket': 'hood', 'Garde corrompu': 'cape', 'Capitaine de la garde': 'cape', 'Sangsue géante': 'seg',
+    'Ent pourri': 'horns', 'Chaman gobelin': 'ears robe staff', 'Seigneur kobold': 'ears crown', 'Aigle géant': 'beak', 'Troll des glaces': 'crystal', 'Chef de guerre orc': 'tusk horns cape',
+    'Golem de magma': 'crystal', 'Phénix noir': 'beak', 'Armure vivante': 'horns', 'Comte vampire': 'cape', 'Chevalier d\'ombre': 'horns cape', 'Maréchal des ombres': 'horns cape crown',
+    'Valkyrie': 'wings', 'Griffon': 'mane', 'Gardien solaire': 'crystal horns', 'Requin abyssal': 'croc', 'Sirène noire': 'hood', 'Reflet du chasseur': 'cape',
+    'Méduse stellaire': 'jelly', 'Golem astéroïde': 'crystal', 'Garde céleste': 'cape', 'Sphinx étoilé': 'mane', 'Ange de l\'aube': 'halo', 'Champion du trône': 'horns cape'
+  });
   const tint = (h, f) => { let c = h.slice(1); if (c.length === 3) c = c[0] + c[0] + c[1] + c[1] + c[2] + c[2]; const n = parseInt(c, 16), k = v => Math.round(f > 0 ? v + (255 - v) * f : v * (1 + f)); return `rgb(${k(n >> 16)},${k(n >> 8 & 255)},${k(n & 255)})`; };
   const vg = (col, y0, y1) => { const gr = g.createLinearGradient(0, y0, 0, y1); gr.addColorStop(0, tint(col, .24)); gr.addColorStop(.5, col); gr.addColorStop(1, tint(col, -.55)); return gr; };
   const el = (cx, cy, rx, ry, rot) => { g.beginPath(); g.ellipse(cx, cy, Math.max(.1, rx), Math.max(.1, ry), rot || 0, 0, 7); g.fill(); };
